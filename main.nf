@@ -30,6 +30,8 @@ params.flexiplex_u = '????????????' //sequence Append the UMI pattern to search 
 params.flexiplex_x2 = 'TTTTTTTTT' //sequence Append flanking sequence to search for
 params.flexiplex_e = 1
 
+params.jaffal_code_dir = "$projectDir/jaffal"
+
 params.outdir = "output" 
 
 process flexiplex{ 
@@ -142,12 +144,14 @@ process bambu{
     samples = "$bam"
     samples = gsub("[][]","", gsub(' ','', samples))
     samples = unlist(strsplit(samples, ','))
+    
+	
 
-    ids = "$id"
-    ids = gsub("[][]","", gsub(' ','', ids))
-    ids = unlist(strsplit(ids, ','))
-    if(length(ids)>1){runName = "combined_"
-    }else{runName = paste0(ids, "_")}
+    ids <- "$id"
+    ids <- gsub("[][]","", gsub(' ','', ids))
+    ids <- unlist(strsplit(ids, ','))
+	runName <- ids
+    if(length(ids)>1) runName <- "combined"
 
     if(file.exists("$barcode_map")){
         x = gsub("[][]","",gsub(' ','', "$barcode_map"))
@@ -169,16 +173,18 @@ process bambu{
 	annotations <- prepareAnnotations("$annotation")
 
 	# Transcript discovery and generate readGrgList for each cell
-    readClassFile = bambu(reads = samples, annotations = annotations, genome = "$genome", 
+	readClassFile = bambu(reads = samples, annotations = annotations, genome = "$genome", 
         ncore = $params.ncore, discovery = FALSE, quant = FALSE, demultiplexed = barcode_maps, 
         verbose = FALSE, assignDist = FALSE, processByChromosome = as.logical("$params.processByChomosome"), 
         processByBam = as.logical("$params.processByBam"), yieldSize = 10000000, 
         sampleNames = ids, cleanReads = as.logical("$cleanReads"), dedupUMI = as.logical("$deduplicateUMIs"))
-    saveRDS(readClassFile, paste0(runName, "_readClassFile.rds"))
+        saveRDS(readClassFile[[1]], paste0(runName, "_readClassFile.rds")) # to align with original bambu, readClassFile should always be of length 1
     if(isFALSE($NDR)){
         extendedAnno = bambu(reads = readClassFile, annotations = annotations, genome = "$genome", ncore = $params.ncore, discovery = TRUE, quant = FALSE, demultiplexed = TRUE, verbose = FALSE, assignDist = FALSE)
+		
     } else{
         extendedAnno = bambu(reads = readClassFile, annotations = annotations, genome = "$genome", ncore = $params.ncore, discovery = TRUE, quant = FALSE, demultiplexed = TRUE, verbose = FALSE, assignDist = FALSE, NDR = $NDR)
+		
     }
     saveRDS(extendedAnno, paste0(runName, "_extended_annotations.rds"))
     rm(annotations)
@@ -265,7 +271,7 @@ process bambu_EM{
     degBias = TRUE
     if(is.null(clusters)){degBias = FALSE}
 
-    se = bambu( reads = "test.rds", 
+    se = bambu( reads = "$readClassFile", 
                 annotations = extendedAnno, 
                 genome = "$genome", 
                 quantData = quantDatas, 
@@ -286,29 +292,22 @@ process bambu_EM{
 }
 
 process fusion_mode_JAFFAL{
+	echo true
     publishDir "$params.outdir", mode: 'copy'
-    container ''
+    container 'quay.io/biocontainers/jaffa:2.3--hdfd78af_0'
 
     input:
-    tuple val(sample),path(fastq), val(chemistry), val(technology)
-    val(jaffal_ref_dir)
+    path(fastq)
+    path(jaffal_ref_dir)
+	path(jaffal_code_dir)
 
     output:
     path('jaffa_results.csv')
 
     script:
     """
-    fastaPath=\$(dirname $fastq)
-    echo \$fastaPath
-    fastaPath=\$(realpath \$fastaPath)
-    fastq2=\$(realpath $fastq)
-    apptainer run                             \
-    -B $jaffal_ref_dir:/ref                      \
-    -B \$fastaPath                      \
-    docker://davidsongroup/jaffa:latest   \
-    -n $params.ncore \
-    /JAFFA/JAFFAL.groovy            \
-    \$fastq2
+
+    bpipe run -p refBase=$jaffal_ref_dir -p codeBase=$jaffal_code_dir $jaffal_code_dir/JAFFAL.groovy $fastq
 
     """
 }
@@ -321,7 +320,7 @@ process fusion_mode_extract{
     path(bam)
     path(genome)
     path(annotation)
-    val(jaffal_ref_dir)
+    path(jaffal_ref_dir)
 
     output:
     path('fusionGene.fasta')
@@ -368,8 +367,8 @@ process fusion_mode_bambu{
     ids = "$id"
     ids = gsub("[][]","", gsub(' ','', ids))
     ids = unlist(strsplit(ids, ','))
-    if(length(ids)>1){runName = "combined_"
-    }else{runName = paste0(ids, "_")}
+    if(length(ids)>1){runName = "combined"
+    }else{runName = ids}
 
 	annotations <- prepareAnnotations("$fusion_gtf")
 
@@ -378,14 +377,16 @@ process fusion_mode_bambu{
         demultiplexed = TRUE, verbose = FALSE, assignDist = FALSE, processByChromosome = as.logical("$params.processByChomosome"), 
         processByBam = as.logical("$params.processByBam"), yieldSize = 10000000, sampleNames = ids,
         cleanReads = as.logical($cleanReads), dedupUMI = as.logical($deduplicateUMIs))
-    saveRDS(readClassFile, paste0("_fusion_readClassFile.rds"))
-    extendedAnno_NDR1 = bambu(reads = readClassFile, annotations = annotations, 
+    saveRDS(readClassFile[[1]], paste0(runName, "_fusion_readClassFile.rds"))
+    
+	extendedAnno_NDR1 = bambu(reads = readClassFile, annotations = annotations, 
         genome = "$fusionGeneScaffolds", NDR = 0.999, fusionMode = TRUE, 
         ncore = $params.ncore, discovery = TRUE, quant = FALSE, demultiplexed = TRUE, 
         verbose = FALSE, assignDist = FALSE)
     saveRDS(extendedAnno_NDR1,paste0("_fusion_extended_annotations_NDR1.rds"))
     rm(annotations)
-    se = bambu(reads = readClassFile, annotations = extendedAnno_NDR1, 
+    
+	se = bambu(reads = readClassFile, annotations = extendedAnno_NDR1, 
         genome = "$fusionGeneScaffolds", ncore = $params.ncore, discovery = FALSE, 
         quant = FALSE, demultiplexed = TRUE, verbose = FALSE, opt.em = list(degradationBias = FALSE), 
         assignDist = TRUE)
@@ -438,8 +439,8 @@ process fusion_mode_bambu_EM{
         fusionID = paste0(colData(quantDatas[[1]])\$sampleName[1], "_")
         clusters[[1]] = gsub(sampleID, fusionID, clusters[[1]])
     }
-    print(clusters)
-    se = bambu( reads = "test.rds", 
+    
+    se = bambu( reads = "$readClassFile", 
                 annotations = extendedAnno, 
                 genome = "$genome", 
                 quantData = quantDatas, 
@@ -463,22 +464,25 @@ process fusion_mode_bambu_EM{
 workflow { 
     ch_genome =  Channel.fromPath(params.genome, checkIfExists: true)
 	ch_annotation =  Channel.fromPath(params.annotation, checkIfExists: true)
-	
+    ch_jaffal_ref_dir =  Channel.fromPath(params.jaffal_ref_dir, checkIfExists: true)
+	ch_jaffal_code_dir =  Channel.fromPath(params.jaffal_code_dir, checkIfExists: true)
+
 	if (params.reads) {
         //User can provide either 1 .fastq file or a .csv with .fastq files
         fastq = file(params.reads, checkIfExists:true)
         if(fastq.getExtension() == "csv") {
             //TODO NEED TO CHECK THAT ALL CHEMISTRY AND TECHNOLOGY VALUES ARE VALID
             //TODO NEED TO INCLUDE WHITELIST
-
+            
             readsChannel = Channel.fromPath(params.reads) \
                     | splitCsv(header:true, sep:',') \
-                    | map { row-> tuple(row.sample, file(row.fastq), 
+                    | map { row-> tuple(row.sample, file(row.fastq),
                                         row.containsKey("chemistry") ? row.chemistry : params.chemistry,
                                         row.containsKey("technology") ? row.technology : params.technology,
                                         row.containsKey("whitelist") ? row.whitelist : params.whitelist,
                                         row.containsKey("barcode_map") ? row.barcode_map :  params.barcodeMap,
                                         row.containsKey("clusters") ? row.whitelist : params.clusters) }        
+            
             flexiplex_out_ch = flexiplex(readsChannel.map{it[0..4]})
             minimap_out_ch = minimap(flexiplex_out_ch, ch_genome)
             barcodeMaps = readsChannel.collect{it[6]}
@@ -499,26 +503,26 @@ workflow {
             barcodeMaps2 = params.barcodeMap
             whiteLists2 = params.whitelist
             clusters2 = params.clusters
+			
 
         }
         sampleIds = minimap_out_ch.collect{it[0]}
         bamsFiles = minimap_out_ch.collect{it[1]}
-        if (params.fusionMode) {
-            fusion_mode_JAFFAL_out_ch = fusion_mode_JAFFAL(readsChannel.map{it[0..3]}, "$params.jaffal_ref_dir")
+		if (params.fusionMode) {
+            fusion_mode_JAFFAL_out_ch = fusion_mode_JAFFAL(readsChannel.collect{it[1]}, ch_jaffal_ref_dir, ch_jaffal_code_dir)
             fusion_mode_extract_out_ch = fusion_mode_extract(fusion_mode_JAFFAL_out_ch, bamsFiles.flatten(), ch_genome, ch_annotation, "$params.jaffal_ref_dir")
             fusion_mode_bambu_out_ch = fusion_mode_bambu(sampleIds, fusion_mode_extract_out_ch, "$params.bambuPath", params.bambuParams)
-        }
-     }
-    else{ //When starting from bam
+	    }
+    }
+    else if(params.bams){ //When starting from bam
         bam = file(params.bams, checkIfExists:true)
         if(bam.getExtension() == "csv") {
             bamsChannel = Channel.fromPath(params.bams) \
                     | splitCsv(header:true, sep:',') \
-                    | map { row-> 
-                                def barcodeMap = row.containsKey("barcode_map") ? row.barcode_map : null
-                                def spatialWhitelist = row.containsKey("spatial_whitelist") ? row.spatial_whitelist : null
-                                def clusters = row.containsKey("clusters") ? row.clusters : null
-                                tuple(row.sample, file(row.bam), barcodeMap, spatialWhitelist, clusters) }
+                    | map { row-> tuple(row.sample, file(row.bam), 
+					row.containsKey("barcode_map") ? row.barcode_map : null, 
+					row.containsKey("spatial_whitelist") ? row.spatial_whitelist : null, 
+					row.containsKey("clusters") ? row.clusters : null)}
             barcodeMaps = bamsChannel.collect{it[2]}
             whiteLists = bamsChannel.collect{it[3]}
             clusters = bamsChannel.collect{it[4]}
@@ -527,7 +531,7 @@ workflow {
             clusters2 = clusters.map { it == null ? it : params.clusters }
             whiteLists2 = whiteLists.map { it == null ? it : params.whitelist }
         }
-        if(bam.getExtension() == "bam"){
+        else if(bam.getExtension() == "bam"){
             bamsChannel = Channel.fromPath(params.bams)
             bamsChannel = bamsChannel
                     .map {["Bambu", it]}
@@ -538,20 +542,49 @@ workflow {
         }
         sampleIds = bamsChannel.collect{it[0]}
         bamsFiles = bamsChannel.collect{it[1]}
-
-
-
     }
+	else if(params.rds){
+		// rds is provided a 1 or multiple files, i.e., 1rds or 1 csv with multiple rds files 
+	    rds = file(params.rds, checkIfExists:true)
+		if(rds.getExtension() == "csv") {
+            rdsChannel = Channel.fromPath(params.rds) \
+                    | splitCsv(header:true, sep:',') \
+                    | map { row-> tuple(row.sample, file(row.rds), 
+								row.containsKey("barcode_map") ? row.barcode_map : null, 
+								row.containsKey("spatial_whitelist") ? row.spatial_whitelist : null, 
+								row.containsKey("clusters") ? row.clusters : null) }
+            barcodeMaps = rdsChannel.collect{it[2]}
+            whiteLists = rdsChannel.collect{it[3]}
+            clusters = rdsChannel.collect{it[4]}
+
+            barcodeMaps2 = barcodeMaps.map { it == null ? it : params.barcodeMap }
+            clusters2 = clusters.map { it == null ? it : params.clusters }
+            whiteLists2 = whiteLists.map { it == null ? it : params.whitelist }
+        }
+        else if(rds.getExtension() == "rds"){
+            rdsChannel = Channel.fromPath(params.rds)
+            rdsChannel = rdsChannel
+                    .map {["Bambu", it]}
+
+            barcodeMaps2 = params.barcodeMap
+            whiteLists2 = params.whitelist
+            clusters2 = params.clusters
+        }
+        sampleIds = rdsChannel.collect{it[0]}
+        bamsFiles = rdsChannel.collect{it[1]}
+
+	}
     if(!params.spatial){
         whiteLists2 = "FALSE" 
     }
-	
-    bambu_out_ch = bambu(sampleIds, bamsFiles, ch_genome, ch_annotation, "$params.bambuPath", params.bambuParams,"$params.NDR",barcodeMaps2, whiteLists2, clusters2, "$params.resolution")
-    if(!params.noEM){
+	bambu_out_ch = bambu(sampleIds, bamsFiles, ch_genome, ch_annotation, "$params.bambuPath", params.bambuParams,"$params.NDR",barcodeMaps2, whiteLists2, clusters2, "$params.resolution")
+	 if(!params.noEM){
+	if (params.fusionMode) {
+        fusion_mode_bambu_EM(fusion_mode_bambu_out_ch, ch_genome, "$params.bambuPath", bambu_out_ch.clusters)
+    }else{
+		sampleIds.view()
         bambuEM_out_ch = bambu_EM(bambu_out_ch, ch_genome, "$params.bambuPath", bambu_out_ch.clusters)
     }
-    if (params.fusionMode && !params.noEM && params.reads) {
-        fusion_mode_bambu_EM(fusion_mode_bambu_out_ch, ch_genome, "$params.bambuPath", bambu_out_ch.clusters)
-    }
+	}
 }
 
