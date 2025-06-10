@@ -31,12 +31,15 @@ params.flexiplex_x2 = 'TTTTTTTTT' //sequence Append flanking sequence to search 
 params.flexiplex_e = 1
 
 params.jaffal_code_dir = "$projectDir/jaffal"
+params.jaffal_ref_dir = null
 
 params.outdir = "output" 
 
 process flexiplex{ 
 
 	publishDir "$params.outdir", mode: 'copy' 
+	container "lingminhao/bambusc:beta1.2"
+
 	cpus params.ncore
 	maxForks params.ncore
 	
@@ -76,7 +79,8 @@ process flexiplex{
 
 process minimap{ 
     publishDir "$params.outdir", mode: 'copy' 
-
+    container "lingminhao/bambusc:beta1.2"
+	
 	cpus params.ncore
 	maxForks params.ncore
 	
@@ -108,6 +112,7 @@ process minimap{
 
 process bambu{ 
     publishDir "$params.outdir", mode: 'copy' 
+    container "lingminhao/bambusc:beta1.2"
 
 	cpus params.ncore 
 	maxForks 1
@@ -173,12 +178,16 @@ process bambu{
 	annotations <- prepareAnnotations("$annotation")
 
 	# Transcript discovery and generate readGrgList for each cell
+	
 	readClassFile = bambu(reads = samples, annotations = annotations, genome = "$genome", 
         ncore = $params.ncore, discovery = FALSE, quant = FALSE, demultiplexed = barcode_maps, 
         verbose = FALSE, assignDist = FALSE, processByChromosome = as.logical("$params.processByChomosome"), 
         processByBam = as.logical("$params.processByBam"), yieldSize = 10000000, 
         sampleNames = ids, cleanReads = as.logical("$cleanReads"), dedupUMI = as.logical("$deduplicateUMIs"))
-        saveRDS(readClassFile[[1]], paste0(runName, "_readClassFile.rds")) # to align with original bambu, readClassFile should always be of length 1
+    if(class(readClassFile[[1]])=="character"){
+	readClassFile <- lapply(readClassFile, function(eachfile) readRDS(eachfile)) # if rds is provided, combine into one list file and save it 
+    }
+	saveRDS(readClassFile, paste0(runName, "_readClassFile.rds")) # to align with original bambu, readClassFile should always be of length 1
     if(isFALSE($NDR)){
         extendedAnno = bambu(reads = readClassFile, annotations = annotations, genome = "$genome", ncore = $params.ncore, discovery = TRUE, quant = FALSE, demultiplexed = TRUE, verbose = FALSE, assignDist = FALSE)
 		
@@ -232,6 +241,7 @@ process bambu{
 process bambu_EM{
 
 	publishDir "$params.outdir", mode: 'copy'
+	container "lingminhao/bambusc:beta1.2"
 
 	cpus params.ncore
     maxForks 1
@@ -268,9 +278,9 @@ process bambu_EM{
     extendedAnno <- readRDS("$extendedAnno")
     quantDatas = readRDS("$quantData")
     clusters = readRDS("$clusters")
+	print(clusters)
     degBias = TRUE
     if(is.null(clusters)){degBias = FALSE}
-
     se = bambu( reads = "$readClassFile", 
                 annotations = extendedAnno, 
                 genome = "$genome", 
@@ -283,7 +293,6 @@ process bambu_EM{
                 verbose = FALSE, 
                 opt.em = list(degradationBias = degBias), 
                 clusters = clusters)
-
     saveRDS(se, paste0(runName, "_se.rds"))
     writeBambuOutput(se, path = ".", prefix = paste0(runName, "_EM_"),outputExtendedAnno = FALSE, 
         outputAll = FALSE, outputBambuModels = FALSE, outputNovelOnly = FALSE)
@@ -294,8 +303,8 @@ process bambu_EM{
 process fusion_mode_JAFFAL{
 	echo true
     publishDir "$params.outdir", mode: 'copy'
-    container 'quay.io/biocontainers/jaffa:2.3--hdfd78af_0'
-
+	container "quay.io/biocontainers/jaffa:2.3--hdfd78af_0"
+    
     input:
     path(fastq)
     path(jaffal_ref_dir)
@@ -314,6 +323,7 @@ process fusion_mode_JAFFAL{
 
 process fusion_mode_extract{
     publishDir "$params.outdir", mode: 'copy'
+	container "lingminhao/bambusc:beta1.2"
 
     input:
     path(jaffa_results)
@@ -339,6 +349,7 @@ process fusion_mode_extract{
 
 process fusion_mode_bambu{
     publishDir "$params.outdir", mode: 'copy'
+    container "lingminhao/bambusc:beta1.2"
 
     input:
     val(id)
@@ -400,6 +411,7 @@ process fusion_mode_bambu{
 process fusion_mode_bambu_EM{
 
 	publishDir "$params.outdir", mode: 'copy'
+	container "lingminhao/bambusc:beta1.2"
 
 	cpus params.ncore
     maxForks 1
@@ -464,9 +476,7 @@ process fusion_mode_bambu_EM{
 workflow { 
     ch_genome =  Channel.fromPath(params.genome, checkIfExists: true)
 	ch_annotation =  Channel.fromPath(params.annotation, checkIfExists: true)
-    ch_jaffal_ref_dir =  Channel.fromPath(params.jaffal_ref_dir, checkIfExists: true)
-	ch_jaffal_code_dir =  Channel.fromPath(params.jaffal_code_dir, checkIfExists: true)
-
+   
 	if (params.reads) {
         //User can provide either 1 .fastq file or a .csv with .fastq files
         fastq = file(params.reads, checkIfExists:true)
@@ -509,6 +519,8 @@ workflow {
         sampleIds = minimap_out_ch.collect{it[0]}
         bamsFiles = minimap_out_ch.collect{it[1]}
 		if (params.fusionMode) {
+			ch_jaffal_ref_dir =  Channel.fromPath(params.jaffal_ref_dir, checkIfExists: true)
+	        ch_jaffal_code_dir =  Channel.fromPath(params.jaffal_code_dir, checkIfExists: true)
             fusion_mode_JAFFAL_out_ch = fusion_mode_JAFFAL(readsChannel.collect{it[1]}, ch_jaffal_ref_dir, ch_jaffal_code_dir)
             fusion_mode_extract_out_ch = fusion_mode_extract(fusion_mode_JAFFAL_out_ch, bamsFiles.flatten(), ch_genome, ch_annotation, "$params.jaffal_ref_dir")
             fusion_mode_bambu_out_ch = fusion_mode_bambu(sampleIds, fusion_mode_extract_out_ch, "$params.bambuPath", params.bambuParams)
@@ -578,11 +590,10 @@ workflow {
         whiteLists2 = "FALSE" 
     }
 	bambu_out_ch = bambu(sampleIds, bamsFiles, ch_genome, ch_annotation, "$params.bambuPath", params.bambuParams,"$params.NDR",barcodeMaps2, whiteLists2, clusters2, "$params.resolution")
-	 if(!params.noEM){
+	if(!params.noEM){
 	if (params.fusionMode) {
         fusion_mode_bambu_EM(fusion_mode_bambu_out_ch, ch_genome, "$params.bambuPath", bambu_out_ch.clusters)
     }else{
-		sampleIds.view()
         bambuEM_out_ch = bambu_EM(bambu_out_ch, ch_genome, "$params.bambuPath", bambu_out_ch.clusters)
     }
 	}
