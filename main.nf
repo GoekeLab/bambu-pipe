@@ -47,7 +47,7 @@ process flexiplex{
 	tuple val(sample), path(fastq), val(chemistry), val(technology), val(whitelist)
 
 	output:
-    tuple val(sample), path("new_reads.fastq.gz"), val(chemistry), val(technology), emit: fastq
+    tuple val(sample), path("${sample}_flexiplexfilter_reads.fastq.gz"), val(chemistry), val(technology), emit: fastq
 
 	script:
 	"""	
@@ -71,8 +71,8 @@ process flexiplex{
 	    python /mnt/software/main.py --outfile my_barcode_list.txt flexiplex_barcodes_counts.txt 
         awk '{print \$1}' whitelist.txt my_barcode_list.txt | sort | uniq -d > my_filtered_barcode_list.txt
 	fi
-    flexiplex -p $params.ncore -k my_filtered_barcode_list.txt \$chem -f 8 -e $params.flexiplex_e reads.fastq > new_reads.fastq
-	gzip new_reads.fastq
+    flexiplex -p $params.ncore -k my_filtered_barcode_list.txt \$chem -f 8 -e $params.flexiplex_e reads.fastq > ${sample}_flexiplexfilter_reads.fastq
+	gzip ${sample}_flexiplexfilter_reads.fastq
     rm reads.fastq
     """
 }
