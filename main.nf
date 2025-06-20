@@ -494,11 +494,13 @@ workflow {
                                         row.containsKey("clusters") ? row.whitelist : params.clusters) }        
             flexiplex_out_ch = flexiplex(readsChannel.map{it[0..4]})
             minimap_out_ch = minimap(flexiplex_out_ch, ch_genome)
-            barcodeMaps = readsChannel.collect{it[6]}
+
+            whitelists = readsChannel.collect{it[4]}
+            barcodeMaps = readsChannel.collect{it[5]}
+            clusters = readsChannel.collect{it[6]}
+
             barcodeMaps2 = barcodeMaps.map { it == null ? it : params.barcodeMap }
-            whitelists = readsChannel.collect{it[5]}
             whiteLists2 = whitelists.map { it == null ? it : params.whitelist }
-            clusters = readsChannel.collect{it[7]}
             clusters2 = clusters.map { it == null ? it : params.clusters }
         }
         else {  
