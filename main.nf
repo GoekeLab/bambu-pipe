@@ -200,7 +200,7 @@ process bambu{
     se = bambu(reads = readClassFile, annotations = extendedAnno, genome = "$genome", ncore = $params.ncore, discovery = FALSE, quant = FALSE, demultiplexed = TRUE, verbose = FALSE, opt.em = list(degradationBias = FALSE), assignDist = TRUE, spatial = spatial)
     saveRDS(se, paste0(runName, "_quantData.rds"))
     for(se.x in se){
-        if(as.logical("$params.processByBam")){
+        if(length(metadata(se.x)[['sampleNames']]) == 1){
             writeBambuOutput(se.x, '.', prefix = metadata(se.x)\$sampleNames)
         } else{
             writeBambuOutput(se.x, '.', prefix = "combined_")
