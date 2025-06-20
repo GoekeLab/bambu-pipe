@@ -86,7 +86,7 @@ process minimap{
 	
 	input: 
 	tuple val(sample),path(newfastq), val(chemistry), val(technology)
-	path(genome)
+	each path(genome)
 
 	output: 
 	tuple val(sample), path ('*.demultiplexed.bam') 
@@ -492,7 +492,6 @@ workflow {
                                         row.containsKey("whitelist") ? row.whitelist : params.whitelist,
                                         row.containsKey("barcode_map") ? row.barcode_map :  params.barcodeMap,
                                         row.containsKey("clusters") ? row.whitelist : params.clusters) }        
-            
             flexiplex_out_ch = flexiplex(readsChannel.map{it[0..4]})
             minimap_out_ch = minimap(flexiplex_out_ch, ch_genome)
             barcodeMaps = readsChannel.collect{it[6]}
