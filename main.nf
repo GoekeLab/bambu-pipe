@@ -47,7 +47,7 @@ process flexiplex{
 	tuple val(sample), path(fastq), val(chemistry), val(technology), val(whitelist)
 
 	output:
-    tuple val(sample), path("new_reads.fastq.gz"), val(chemistry), val(technology), emit: fastq
+    tuple val(sample), path("${sample}_flexiplexfilter_reads.fastq.gz"), val(chemistry), val(technology), emit: fastq
 
 	script:
 	"""	
@@ -71,8 +71,8 @@ process flexiplex{
 	    python /mnt/software/main.py --outfile my_barcode_list.txt flexiplex_barcodes_counts.txt 
         awk '{print \$1}' whitelist.txt my_barcode_list.txt | sort | uniq -d > my_filtered_barcode_list.txt
 	fi
-    flexiplex -p $params.ncore -k my_filtered_barcode_list.txt \$chem -f 8 -e $params.flexiplex_e reads.fastq > new_reads.fastq
-	gzip new_reads.fastq
+    flexiplex -p $params.ncore -k my_filtered_barcode_list.txt \$chem -f 8 -e $params.flexiplex_e reads.fastq > ${sample}_flexiplexfilter_reads.fastq
+	gzip ${sample}_flexiplexfilter_reads.fastq
     rm reads.fastq
     """
 }
@@ -86,7 +86,7 @@ process minimap{
 	
 	input: 
 	tuple val(sample),path(newfastq), val(chemistry), val(technology)
-	path(genome)
+	each path(genome)
 
 	output: 
 	tuple val(sample), path ('*.demultiplexed.bam') 
@@ -200,7 +200,7 @@ process bambu{
     se = bambu(reads = readClassFile, annotations = extendedAnno, genome = "$genome", ncore = $params.ncore, discovery = FALSE, quant = FALSE, demultiplexed = TRUE, verbose = FALSE, opt.em = list(degradationBias = FALSE), assignDist = TRUE, spatial = spatial)
     saveRDS(se, paste0(runName, "_quantData.rds"))
     for(se.x in se){
-        if(as.logical("$params.processByBam")){
+        if(length(metadata(se.x)[['sampleNames']]) == 1){
             writeBambuOutput(se.x, '.', prefix = metadata(se.x)\$sampleNames)
         } else{
             writeBambuOutput(se.x, '.', prefix = "combined_")
@@ -492,14 +492,15 @@ workflow {
                                         row.containsKey("whitelist") ? row.whitelist : params.whitelist,
                                         row.containsKey("barcode_map") ? row.barcode_map :  params.barcodeMap,
                                         row.containsKey("clusters") ? row.whitelist : params.clusters) }        
-            
             flexiplex_out_ch = flexiplex(readsChannel.map{it[0..4]})
             minimap_out_ch = minimap(flexiplex_out_ch, ch_genome)
-            barcodeMaps = readsChannel.collect{it[6]}
+
+            whitelists = readsChannel.collect{it[4]}
+            barcodeMaps = readsChannel.collect{it[5]}
+            clusters = readsChannel.collect{it[6]}
+
             barcodeMaps2 = barcodeMaps.map { it == null ? it : params.barcodeMap }
-            whitelists = readsChannel.collect{it[5]}
             whiteLists2 = whitelists.map { it == null ? it : params.whitelist }
-            clusters = readsChannel.collect{it[7]}
             clusters2 = clusters.map { it == null ? it : params.clusters }
         }
         else {  
