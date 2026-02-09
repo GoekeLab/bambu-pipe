@@ -1,0 +1,85 @@
+process MINIMAP_BUILD_INDEX{
+    container "ghcr.io/ch99l/bambu-pipe:latest"
+    label "low_cpu"
+    label "medium_mem"
+    label "short"
+
+    input: 
+    path(genome)
+
+    output: 
+    path('ref.mmi')
+
+    script:
+    """ 
+    minimap2 -k15 -w5 -d ref.mmi $genome
+    """
+}
+
+process PAFTOOLS_GFF2BED {
+    container "ghcr.io/ch99l/bambu-pipe:latest"
+    label "low_cpu"
+    label "low_mem"
+    label "short"
+
+    input: 
+    path(gtf)
+
+    output: 
+    path('anno.bed')
+
+    script:
+    """ 
+    paftools.js gff2bed $gtf > anno.bed
+    """
+}
+
+process MINIMAP_ALIGNMENT{ 
+    container "ghcr.io/ch99l/bambu-pipe:latest"
+    label "high_cpu"
+    label "high_mem"
+    label "long"
+	
+	input: 
+	tuple val(sample), path(newfastq), val(meta)
+    path(ref_mmi)
+    path(bed)
+
+	output: 
+	tuple val(sample), path("${sample}_demultiplexed.bam"), val(meta)
+
+	script:
+	""" 
+	if [[ $meta.technology == "PacBio" ]]; then 
+		minimap2 -ax splice:hq -uf -t $task.cpus $ref_mmi $newfastq > demultiplexed.sam  
+	
+	else
+		minimap2 -ax splice -uf -t $task.cpus $ref_mmi $newfastq > demultiplexed.sam  
+	fi
+
+	samtools sort -@ $task.cpus demultiplexed.sam -o ${sample}_demultiplexed.bam 
+	samtools index -@ $task.cpus ${sample}_demultiplexed.bam 
+
+    rm demultiplexed.sam
+	"""
+}
+
+workflow ALIGNMENT {
+    take: 
+    ch_unaligned_fastq
+    ch_genome
+    ch_annotation 
+
+    main:
+    // Build minimap2 index based on reference genome
+    MINIMAP_BUILD_INDEX(ch_genome)
+
+    // Convert gtf/gff annotation to bed format
+    PAFTOOLS_GFF2BED(ch_annotation)
+
+    // Minimap alignment
+    MINIMAP_ALIGNMENT(ch_unaligned_fastq, MINIMAP_BUILD_INDEX.out, PAFTOOLS_GFF2BED.out)
+    
+    emit:
+    MINIMAP_ALIGNMENT.out
+}

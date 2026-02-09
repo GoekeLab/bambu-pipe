@@ -1,0 +1,6 @@
+technology,spatial_coordinate_path
+visium-v1,/mnt/software/cellranger-10.0.0/lib/python/cellranger/barcodes/visium-v1_coordinates.txt
+visium-v2,/mnt/software/cellranger-10.0.0/lib/python/cellranger/barcodes/visium-v2_coordinates.txt
+visium-v3,/mnt/software/cellranger-10.0.0/lib/python/cellranger/barcodes/visium-v2_coordinates.txt
+visium-v4,/mnt/software/cellranger-10.0.0/lib/python/cellranger/barcodes/visium-v4_coordinates.txt
+visium-v5,/mnt/software/cellranger-10.0.0/lib/python/cellranger/barcodes/visium-v5_coordinates.txt

@@ -1,0 +1,11 @@
+technology,barcode_path
+10x3v2,/mnt/software/cellranger-10.0.0/lib/python/cellranger/barcodes/737K-august-2016.txt
+10x3v3,/mnt/software/cellranger-10.0.0/lib/python/cellranger/barcodes/3M-february-2018_TRU.txt.gz
+10x3v4,/mnt/software/cellranger-10.0.0/lib/python/cellranger/barcodes/3M-3pgex-may-2023_TRU.txt.gz
+10x5v2,/mnt/software/cellranger-10.0.0/lib/python/cellranger/barcodes/737K-august-2016.txt
+10x5v3,/mnt/software/cellranger-10.0.0/lib/python/cellranger/barcodes/3M-5pgex-jan-2023.txt.gz
+visium-v1,/mnt/software/cellranger-10.0.0/lib/python/cellranger/barcodes/visium-v1.txt
+visium-v2,/mnt/software/cellranger-10.0.0/lib/python/cellranger/barcodes/visium-v2.txt
+visium-v3,/mnt/software/cellranger-10.0.0/lib/python/cellranger/barcodes/visium-v3.txt
+visium-v4,/mnt/software/cellranger-10.0.0/lib/python/cellranger/barcodes/visium-v4.txt
+visium-v5,/mnt/software/cellranger-10.0.0/lib/python/cellranger/barcodes/visium-v5.txt
