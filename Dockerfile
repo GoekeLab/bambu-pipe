@@ -60,11 +60,14 @@ RUN cd mnt/software && wget https://github.com/DavidsonGroup/flexiplex/archive/r
 # install flexiplex-filter (v1.02.5)
 RUN cd mnt/software/flexiplex-1.02.5/scripts && python3 -m venv /mnt/software/flexiplex-filter-venv && /mnt/software/flexiplex-filter-venv/bin/pip install --no-cache-dir .
 
-# install cellranger (v10.0.0)
-RUN cd mnt/software && curl -o cellranger-10.0.0.tar.gz "https://cf.10xgenomics.com/releases/cell-exp/cellranger-10.0.0.tar.gz?Expires=1768319093&Key-Pair-Id=APKAI7S6A5RYOXBWRPDA&Signature=KK-8dy7FbDHKcT62MT63T9ybU3joNvNNmERAgNVGN9fR7ZS9Kitnj6MFLQVleGROqx5U-BwCREGBvoy-nOIawRFegmS0tbuu7RlHnIG3rgNrJ2xDj80t2mYZ4g55MuyLdSmQAHDh5Xbb-4-Y-vNo5LwZp7z6HSjTHx6~ezoPE6WvOEMV4zmxLRiWIuSvxqKBl10qqOwyTajsAeAqrcswOlmBBUIIzr9UeqRmLag~u83OPR9H-Ed12Hg~WtjkRo33lFl2D~F5y3TPbjYcAhxzJ0WaKybbw3rjhxUHe1TFIBCpsxkTn6QvJ4U1tjRVkb3~TgrUtAdT4np7iPMRCd9w5w__" && tar -xzvf cellranger-10.0.0.tar.gz && rm cellranger-10.0.0.tar.gz
+# install cellranger (v10.0.0) **IMPORTANT: Update the Download Key when building the DockerFile
+RUN cd mnt/software && curl -o cellranger-10.0.0.tar.gz "https://cf.10xgenomics.com/releases/cell-exp/cellranger-10.0.0.tar.gz?Expires=1770734790&Key-Pair-Id=APKAI7S6A5RYOXBWRPDA&Signature=XJngvA75zSPumb8-fcpq4j4SD31AHtB5Fa0Jjt3phcdFFuhu7UOtz2G6hgUgeOcCRCVhWrZg8Mz-jMYWFyy~XHcB2S7diD3fyedIqhq6ewawhOxPoGOMOGCYrA8rQZrUJHnQD9TE-Bh39g7-7QJfdWG6CXaDI8p6SMb3L4X3dQ-cOl4bRVAS9IVjgRXLpgFdFQ7oS4bHNXlwkpv9S5gPOulHYWd4CDL0bg0DPaoqCqpuMoZabRmbjvcrTeS~Kj-RqFGo4piAbNQpWhbZb3dbyXkOpTKo-jbvtzUsTskRZRn9MZTb8~qO50RTTvHl2~J-tYlQmLCkVMUQr4LEuXEWig__" && tar -xzvf cellranger-10.0.0.tar.gz && rm cellranger-10.0.0.tar.gz
 
 # install minimap2 (v2.30)
 RUN cd mnt/software && wget https://github.com/lh3/minimap2/archive/refs/tags/v2.30.tar.gz && tar -xvf v2.30.tar.gz && rm -rf v2.30.tar.gz && cd minimap2-2.30 && make
+
+# install k8 javascript shell (v0.2.4)
+RUN cd mnt/software && curl -L https://github.com/attractivechaos/k8/releases/download/v0.2.4/k8-0.2.4.tar.bz2 | tar -jxf - && cp k8-0.2.4/k8-`uname -s` k8
 
 # install samtools (v1.18)
 RUN cd mnt/software && wget https://github.com/samtools/htslib/releases/download/1.18/htslib-1.18.tar.bz2 \
@@ -89,4 +92,4 @@ RUN cd mnt/software && git clone -b devel_pre_v4 --single-branch https://github.
 RUN cd mnt/software && R -e "library('devtools'); devtools::load_all('bambu')"
 
 # environment variables 
-ENV PATH=$PATH:/mnt/software/chopper:/mnt/software/cutadapt-venv/bin:/mnt/software/flexiplex-1.02.5:/mnt/software/flexiplex-filter-venv/bin:/mnt/software/minimap2-2.30:/mnt/software/samtools-1.18:/mnt/software/htslib-1.18:/mnt/software/bambu
+ENV PATH=$PATH:/mnt/software:/mnt/software/chopper:/mnt/software/cutadapt-venv/bin:/mnt/software/flexiplex-1.02.5:/mnt/software/flexiplex-filter-venv/bin:/mnt/software/minimap2-2.30:/mnt/software/minimap2-2.30/misc:/mnt/software/samtools-1.18:/mnt/software/htslib-1.18:/mnt/software/bambu

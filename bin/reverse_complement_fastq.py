@@ -95,7 +95,7 @@ if __name__ == "__main__":
                 break
             
             dna_seq = f_in.readline().rstrip()
-            separator = f_in.readline().rstrip()
+            f_in.readline() # Read separator line but do not store it
             phred_seq = f_in.readline().rstrip()
             
             # Get header, DNA sequence and Phred sequence for reverse complement
@@ -104,7 +104,7 @@ if __name__ == "__main__":
             rc_phred_seq = reverse_phred_scores(phred_seq)
 
             # Write output
-            f_out.write(f"{rc_header}\n{rc_dna_seq}\n{separator}\n{rc_phred_seq}\n")
+            f_out.write(f"{rc_header}\n{rc_dna_seq}\n+\n{rc_phred_seq}\n")
 
             # Increment read counter
             reads_processed += 1

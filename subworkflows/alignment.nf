@@ -51,12 +51,12 @@ process MINIMAP_ALIGNMENT{
 	script:
 	""" 
 	if [[ $meta.technology == "PacBio" ]]; then 
-		minimap2 -ax splice:hq -uf -t $task.cpus $ref_mmi $newfastq > demultiplexed.sam  
-	
+		preset="splice:hq"
 	else
-		minimap2 -ax splice -uf -t $task.cpus $ref_mmi $newfastq > demultiplexed.sam  
+		preset="splice"  
 	fi
 
+    minimap2 -ax \$preset -uf --junc-bed $bed -t $task.cpus $ref_mmi $newfastq > demultiplexed.sam
 	samtools sort -@ $task.cpus demultiplexed.sam -o ${sample}_demultiplexed.bam 
 	samtools index -@ $task.cpus ${sample}_demultiplexed.bam 
 

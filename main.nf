@@ -10,7 +10,7 @@ include { BAMBU } from './modules/bambu.nf'
 include { BAMBU_EM } from './modules/bambu_EM.nf'
 
 workflow {
-    // converting params to correct datatypes
+    def barcode_map_default = true
     def ndr = params.ndr ?: 'NULL'
     def run_em = params.quantification_mode != 'no_EM'
     def run_clustering = params.quantification_mode == 'EM_clusters'
@@ -45,7 +45,7 @@ workflow {
         def meta = [
             chemistry: row.containsKey("chemistry") ? row.chemistry : params.chemistry,
             technology: row.containsKey("technology") ? row.technology : params.technology,
-            barcode_map: row.containsKey("barcode_map") && row.barcode_map ? row.barcode_map :  params.barcode_map // For barcode_map if the column or value is missing use params.barcode_map
+            barcode_map: row.containsKey("barcode_map") && row.barcode_map ? row.barcode_map : barcode_map_default // For barcode_map if the column or value is missing use barcode_map_default
         ]
         
         [row.sample, file(row.path), meta]
@@ -58,7 +58,7 @@ workflow {
 
     // process fastq samples
     PREPROCESS_FASTQ(ch_fastq_rows)
-    ALIGNMENT(PREPROCESS_FASTQ.out, ch_genome)
+    ALIGNMENT(PREPROCESS_FASTQ.out, ch_genome, ch_annotation)
 
     // process bam samples
     ch_bam_files = ALIGNMENT.out.concat(ch_bam_rows) // concatenate aligned bam files with input bam files

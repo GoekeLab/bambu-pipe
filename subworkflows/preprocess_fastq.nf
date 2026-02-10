@@ -88,7 +88,7 @@ process TRIM_AND_ORIENT{
     elif [[ $meta.chemistry == 10x3* || $meta.chemistry == visium-v* ]]; then
         cutadapt -a \$rev_primer_f --cores $task.cpus $fastq | \
         cutadapt -b \$fwd_primer_f -b \$fwd_primer_r -b \$rev_primer_f -b \$rev_primer_r --action none --discard --cores $task.cpus - | \
-        reverse_complement_fastq.py -i - -o ${sample}_preprocessed_reads.fastq # For 3' preparation kits, orient reads in the transcript direction to improve minimap alignment
+        python reverse_complement_fastq.py -i - -o ${sample}_preprocessed_reads.fastq # For 3' preparation kits, orient reads in the transcript direction to improve minimap alignment
         
     fi
 
