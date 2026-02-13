@@ -7,7 +7,7 @@ process EXTRACT_10X_BARCODES {
     path(barcode_coordinate_config)
 
     output:
-    tuple val(chemistry), path("${chemistry}_10x_barcodes.txt")
+    tuple val(chemistry), path("*.txt*")
 
     script:
     """
@@ -15,7 +15,7 @@ process EXTRACT_10X_BARCODES {
     IFS=',' read -r _ bc_filename _ < <(awk -F',' -v chem=$chemistry '\$1 == chem' $barcode_coordinate_config)
 
     # extract 10x barcode file from spaceranger container (used for subsequent processes)
-    cp $params.cellranger_dir/\$bc_filename ${chemistry}_10x_barcodes.txt
+    cp $params.cellranger_dir/\$bc_filename .
     """
 }
 
@@ -28,7 +28,7 @@ process EXTRACT_10X_SPATIAL_COORDINATES {
     path(barcode_coordinate_config)
 
     output:
-    tuple val(chemistry), path("${chemistry}_spatial_coordinates.txt")
+    tuple val(chemistry), path("*.txt*")
 
     script:
     """
@@ -37,9 +37,9 @@ process EXTRACT_10X_SPATIAL_COORDINATES {
 
     # extract spatial coordinate file from spaceranger container (used for subsequent processes)
     if [[ $chemistry == visium* ]]; then
-        cp $params.cellranger_dir/\$sc_filename ${chemistry}_spatial_coordinates.txt
+        cp $params.cellranger_dir/\$sc_filename .
     else
-        touch ${chemistry}_spatial_coordinates.txt # create empty file for non-visium chemistries
+        touch dummy_spatial_coordinates.txt # create empty file for non-visium chemistries
     fi
     """
 }
