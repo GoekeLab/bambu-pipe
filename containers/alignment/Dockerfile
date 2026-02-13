@@ -5,6 +5,7 @@ RUN micromamba install -y -n base \
 	-c bioconda \
 	minimap2=2.30 \
 	samtools=1.23 \
+	procps-ng \
 && micromamba clean -ay
 
 ENV PATH=/opt/conda/bin:$PATH

@@ -2,7 +2,8 @@ FROM rocker/r-base:4.4.1
 
 # install system dependencies
 RUN apt-get update && apt-get install -y \
-	  libcurl4-openssl-dev && rm -rf /var/lib/apt/lists/*
+	  libcurl4-openssl-dev \
+	  procps && rm -rf /var/lib/apt/lists/*
 
 # install Seurat Object (v5.3.0), Seurat (v5.4.0), and Bambu
 RUN R -e "install.packages('pak', repos='https://cloud.r-project.org')"
