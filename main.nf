@@ -11,7 +11,6 @@ include { BAMBU } from './modules/bambu.nf'
 include { BAMBU_EM } from './modules/bambu_EM.nf'
 
 workflow {
-    def barcode_map_default = true
     def ndr = params.ndr ?: 'NULL'
     def run_em = params.quantification_mode != 'no_EM'
     def run_clustering = params.quantification_mode == 'EM_clusters'
