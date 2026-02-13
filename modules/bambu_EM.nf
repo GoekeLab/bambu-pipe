@@ -1,6 +1,6 @@
 process BAMBU_EM{
 	publishDir "$params.output_dir", mode: 'copy'
-	container "ghcr.io/ch99l/bambu-pipe:latest"
+	container "ghcr.io/ch99l/bambu-pipe-r:latest"
     label "medium_cpu"
     label "high_mem"
     label "medium"
@@ -19,8 +19,7 @@ process BAMBU_EM{
     """
     #!/usr/bin/env Rscript
     #.libPaths("/usr/local/lib/R/site-library")
-    library(devtools)
-    load_all("$params.bambu_path")
+    library("bambu")
     
     idNames <- strsplit("${sample.join(',')}", ",")[[1]]
 	runName = if (length(idNames) == 1) idNames[1] else "combined"

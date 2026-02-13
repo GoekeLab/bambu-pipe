@@ -1,5 +1,5 @@
 process MINIMAP_BUILD_INDEX{
-    container "ghcr.io/ch99l/bambu-pipe:latest"
+    container "ghcr.io/ch99l/bambu-pipe-alignment:latest"
     label "low_cpu"
     label "medium_mem"
     label "short"
@@ -12,12 +12,12 @@ process MINIMAP_BUILD_INDEX{
 
     script:
     """ 
-    minimap2 -k15 -w5 -d ref.mmi $genome
+    minimap2 -k15 -w5 -d ref.mmi $genome # -k and -w flags are used for both splice:hq and splice presets
     """
 }
 
 process PAFTOOLS_GFF2BED {
-    container "ghcr.io/ch99l/bambu-pipe:latest"
+    container "ghcr.io/ch99l/bambu-pipe-alignment:latest"
     label "low_cpu"
     label "low_mem"
     label "short"
@@ -35,7 +35,7 @@ process PAFTOOLS_GFF2BED {
 }
 
 process MINIMAP_ALIGNMENT{ 
-    container "ghcr.io/ch99l/bambu-pipe:latest"
+    container "ghcr.io/ch99l/bambu-pipe-alignment:latest"
     label "high_cpu"
     label "high_mem"
     label "long"

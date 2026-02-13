@@ -1,5 +1,5 @@
 process BAMBU_PREPARE_ANNOTATION{
-    container "ghcr.io/ch99l/bambu-pipe:latest"
+    container "ghcr.io/ch99l/bambu-pipe-r:latest"
     label "low_cpu"
     label "low_mem"
     label "short"
@@ -13,9 +13,7 @@ process BAMBU_PREPARE_ANNOTATION{
     script:
     """
     #!/usr/bin/env Rscript
-
-    library("devtools")
-    load_all("$params.bambu_path")
+    library("bambu")
 
     annotation <- prepareAnnotations("$annotation")
     saveRDS(annotation, "bambu_annotation.rds")

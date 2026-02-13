@@ -2,6 +2,7 @@
 
 nextflow.enable.dsl=2
 
+include { PARSE_SAMPLESHEET } from './subworkflows/parse_samplesheet.nf'
 include { PREPROCESS_FASTQ } from './subworkflows/preprocess_fastq.nf'
 include { ALIGNMENT } from './subworkflows/alignment.nf'
 include { BAMBU_CONSTRUCT_READ_CLASS } from './modules/bambu_construct_read_class.nf'
@@ -16,8 +17,8 @@ workflow {
     def run_clustering = params.quantification_mode == 'EM_clusters'
 
     // checking required params
-    if (!params.reads) {
-        error "params.reads is not set — please provide a path to a CSV samplesheet"
+    if (!params.input) {
+        error "params.input is not set — please provide a path to a CSV samplesheet"
     }
 
     if (!params.genome) {
@@ -28,36 +29,33 @@ workflow {
         error "params.annotation is not set — please provide a path to the reference annotation GTF file"
     }
 
-    // ensure samplesheet exists and is a CSV file
-    def reads_file = file(params.reads, checkIfExists: true)
-    if (reads_file.getExtension() != "csv") {
-        error "params.reads must be a CSV samplesheet"
-    }
-
-    // parsing genome and annotation files
+    // load reference files
     ch_genome =  Channel.value(file(params.genome, checkIfExists: true))
 	ch_annotation =  Channel.value(file(params.annotation, checkIfExists: true))
 
+    // load config files
+    ch_barcode_coordinate_config = file("${projectDir}/10x_config/barcode_coordinate_config.csv", checkIfExists: true)
+    ch_adapter_seq_config = file("${projectDir}/10x_config/adapter_seq_config.csv", checkIfExists: true)
+    ch_flank_seq_config = file("${projectDir}/10x_config/flank_seq_config.csv", checkIfExists: true)
+
     // parsing samplesheet csv file
-    ch_reads = Channel.fromPath(params.reads)
-    | splitCsv(header:true, sep:',')
-    | map { row ->
-        def meta = [
-            chemistry: row.containsKey("chemistry") ? row.chemistry : params.chemistry,
-            technology: row.containsKey("technology") ? row.technology : params.technology,
-            barcode_map: row.containsKey("barcode_map") && row.barcode_map ? row.barcode_map : barcode_map_default // For barcode_map if the column or value is missing use barcode_map_default
-        ]
-        
-        [row.sample, file(row.path), meta]
+    ch_input = Channel.fromPath(params.input, checkIfExists: true)
+    .ifEmpty { error "Cannot find samplesheet file: ${params.input}" }
+    .map { file ->
+        if (file.extension != "csv") {
+            error "Invalid samplesheet. Must be a CSV file."
+        }
+        return file
     }
-   
-    // filtering input files by type (fastq, bam, rds)
-    ch_fastq_rows = ch_reads.filter { sample, path, meta -> path.name.endsWith('.fastq') || path.name.endsWith('.fastq.gz') }
-    ch_bam_rows = ch_reads.filter { sample, path, meta -> path.name.endsWith('.bam') }
-    ch_rds_rows = ch_reads.filter { sample, path, meta -> path.name.endsWith('.rds') }
+    PARSE_SAMPLESHEET(ch_input, ch_barcode_coordinate_config)
+
+    // input files are split by type (fastq, bam, rds)
+    ch_fastq_rows = PARSE_SAMPLESHEET.out.fastq
+    ch_bam_rows = PARSE_SAMPLESHEET.out.bam
+    ch_rds_rows = PARSE_SAMPLESHEET.out.rds
 
     // process fastq samples
-    PREPROCESS_FASTQ(ch_fastq_rows)
+    PREPROCESS_FASTQ(ch_fastq_rows, ch_adapter_seq_config,  ch_flank_seq_config)
     ALIGNMENT(PREPROCESS_FASTQ.out, ch_genome, ch_annotation)
 
     // process bam samples

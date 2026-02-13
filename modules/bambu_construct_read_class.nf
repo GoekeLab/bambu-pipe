@@ -1,5 +1,5 @@
 process BAMBU_CONSTRUCT_READ_CLASS{
-    container "ghcr.io/ch99l/bambu-pipe:latest"
+    container "ghcr.io/ch99l/bambu-pipe-r:latest"
     label "low_cpu"
     label "high_mem"
     label "medium"
@@ -15,9 +15,7 @@ process BAMBU_CONSTRUCT_READ_CLASS{
     script:
     """
     #!/usr/bin/env Rscript
-    
-    library("devtools")
-    load_all("$params.bambu_path")
+    library("bambu")
 
     if ("$meta.barcode_map" == "true") {
     demultiplexed = TRUE} else {

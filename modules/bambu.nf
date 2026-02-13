@@ -1,6 +1,6 @@
 process BAMBU{ 
     publishDir "$params.output_dir", mode: 'copy', pattern: '*quantData.rds'
-    container "ghcr.io/ch99l/bambu-pipe:latest"
+    container "ghcr.io/ch99l/bambu-pipe-r:latest"
     label "medium_cpu"
     label "high_mem"
     label "medium"
@@ -21,9 +21,7 @@ process BAMBU{
 	""" 
 	#!/usr/bin/env Rscript
     #.libPaths("/usr/local/lib/R/site-library")
-    
-    library(devtools)
-    load_all("$params.bambu_path")
+    library("bambu")
 
 	## Transcript discovery and quantification without EM
     idNames <- strsplit("${sample.join(',')}", ",")[[1]]

@@ -1,0 +1,11 @@
+technology,barcode_path,spatial_coordinate_path
+10x3v2,737K-august-2016.txt,
+10x3v3,3M-february-2018_TRU.txt.gz,
+10x3v4,3M-3pgex-may-2023_TRU.txt.gz,
+10x5v2,737K-august-2016.txt,
+10x5v3,3M-5pgex-jan-2023.txt.gz,
+visium-v1,visium-v1.txt,visium-v1_coordinates.txt
+visium-v2,visium-v2.txt,visium-v2_coordinates.txt
+visium-v3,visium-v3.txt,visium-v3_coordinates.txt
+visium-v4,visium-v4.txt,visium-v4_coordinates.txt
+visium-v5,visium-v5.txt,visium-v5_coordinates.txt

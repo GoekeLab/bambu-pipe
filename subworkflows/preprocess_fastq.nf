@@ -1,5 +1,5 @@
 process QFILTER{
-    container "ghcr.io/ch99l/bambu-pipe:latest"
+    container "ghcr.io/ch99l/bambu-pipe-preprocess:latest"
     label "low_cpu"
     label "low_mem"
     label "long"
@@ -21,13 +21,14 @@ process QFILTER{
 }
 
 process DEMULTIPLEX{  
-	container "ghcr.io/ch99l/bambu-pipe:latest"
+	container "ghcr.io/ch99l/bambu-pipe-preprocess:latest"
     label "medium_cpu"
     label "low_mem"
     label "long"
 
 	input: 
-	tuple val(sample), path(fastq), val(meta)
+	tuple val(sample), path(fastq), val(meta), path(whitelist)
+    path(flank_seq_config)
 
 	output:
     tuple val(sample), path("${sample}_flexiplexfilter_reads.fastq*"), val(meta)
@@ -41,15 +42,13 @@ process DEMULTIPLEX{
         fastq_file="$fastq"
     fi
 
-    whitelist=\$(awk -F',' -v chem=$meta.chemistry '\$1 == chem {print \$2}' ${projectDir}/10x_config/barcode_config.csv)
-    if [[ \$whitelist == *.gz ]]; then
-        pigz -p $task.cpus -d -c \$whitelist > whitelist.txt
+    if [[ $whitelist == *.gz ]]; then
+        pigz -p $task.cpus -d -c $whitelist > whitelist.txt
     else
-        cp \$whitelist whitelist.txt
+        cp $whitelist whitelist.txt
     fi
 
-    IFS=',' read -r _ left_flank barcode umi right_flank \
-    < <(awk -F',' -v chem=$meta.chemistry '\$1 == chem' ${projectDir}/10x_config/flank_seq_config.csv)
+    IFS=',' read -r _ left_flank barcode umi right_flank < <(awk -F',' -v chem=$meta.chemistry '\$1 == chem' $flank_seq_config)
     flank_seq="-x \$left_flank -b \$barcode -u \$umi -x \$right_flank"
 
 	flexiplex -p $task.cpus \$flank_seq -f 0 \$fastq_file
@@ -64,13 +63,14 @@ process DEMULTIPLEX{
 }
 
 process TRIM_AND_ORIENT{
-    container "ghcr.io/ch99l/bambu-pipe:latest"
+    container "ghcr.io/ch99l/bambu-pipe-preprocess:latest"
     label "medium_cpu"
     label "low_mem"
     label "short"
 
     input:
     tuple val(sample), path(fastq), val(meta)
+    path(adapter_seq_config)
     
     output:
     tuple val(sample), path("${sample}_preprocessed_reads.fastq*"), val(meta)
@@ -78,7 +78,7 @@ process TRIM_AND_ORIENT{
     script:
     """
     IFS=',' read -r _ fwd_primer_f fwd_primer_r rev_primer_f rev_primer_r TSO_f TSO_r \
-    < <(awk -F',' -v chem=$meta.chemistry '\$1 == chem' ${projectDir}/10x_config/adapter_seq_config.csv)
+    < <(awk -F',' -v chem=$meta.chemistry '\$1 == chem' $adapter_seq_config)
 
     if [[ $meta.chemistry == 10x5* ]]; then
         cutadapt -a \$rev_primer_f --cores $task.cpus $fastq | \
@@ -101,11 +101,19 @@ process TRIM_AND_ORIENT{
 workflow PREPROCESS_FASTQ {
     take: 
     ch_fastq
+    ch_adapter_seq_config
+    ch_flank_seq_config
 
     main:
-    // process fastq samples
+    // quality score filtering
     ch_flexiplex_in = params.qscore_filtering ? QFILTER(ch_fastq) : ch_fastq // skip quality score filtering if params.qscore_filtering is false
-    ch_flexiplex_in | DEMULTIPLEX | TRIM_AND_ORIENT // chain preprocessing steps
+    
+    // demultiplexing
+    ch_flexiplex_in = ch_flexiplex_in.map { sample, fastq, meta -> [sample, fastq, meta, meta.barcode] } // add whitelist path to input tuple
+    DEMULTIPLEX(ch_flexiplex_in, ch_flank_seq_config)
+
+    // adapter trimming and orienting reads to transcript direction
+    TRIM_AND_ORIENT(DEMULTIPLEX.out, ch_adapter_seq_config) 
 
     emit:
     TRIM_AND_ORIENT.out
