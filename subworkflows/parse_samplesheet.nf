@@ -14,7 +14,7 @@ process EXTRACT_10X_BARCODES {
     # extract 10x barcode file path from config csv
     IFS=',' read -r _ bc_filename _ < <(awk -F',' -v chem=$chemistry '\$1 == chem' $barcode_coordinate_config)
 
-    # extract 10x barcode file name from config csv
+    # extract 10x barcode file from spaceranger container (used for subsequent processes)
     cp $params.cellranger_dir/\$bc_filename ${chemistry}_10x_barcodes.txt
     """
 }
@@ -35,7 +35,7 @@ process EXTRACT_10X_SPATIAL_COORDINATES {
     # extract spatial coordinate file path from config csv
     IFS=',' read -r _ _ sc_filename < <(awk -F',' -v chem=$chemistry '\$1 == chem' $barcode_coordinate_config)
 
-    # extract spatial coordinate file name from config csv
+    # extract spatial coordinate file from spaceranger container (used for subsequent processes)
     if [[ $chemistry == visium* ]]; then
         cp $params.cellranger_dir/\$sc_filename ${chemistry}_spatial_coordinates.txt
     else
