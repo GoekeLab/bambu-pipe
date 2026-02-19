@@ -116,5 +116,5 @@ workflow PREPROCESS_FASTQ {
     TRIM_AND_ORIENT(DEMULTIPLEX.out, ch_adapter_seq_config) 
 
     emit:
-    TRIM_AND_ORIENT.out
+    fastq = TRIM_AND_ORIENT.out
 }

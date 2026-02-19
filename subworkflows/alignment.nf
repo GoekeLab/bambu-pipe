@@ -34,7 +34,8 @@ process PAFTOOLS_GFF2BED {
     """
 }
 
-process MINIMAP_ALIGNMENT{ 
+process MINIMAP_ALIGNMENT{
+    publishDir "$params.output_dir", mode: 'copy' 
     container "ghcr.io/ch99l/bambu-pipe-alignment:latest"
     label "high_cpu"
     label "high_mem"
@@ -81,5 +82,5 @@ workflow ALIGNMENT {
     MINIMAP_ALIGNMENT(ch_unaligned_fastq, MINIMAP_BUILD_INDEX.out, PAFTOOLS_GFF2BED.out)
     
     emit:
-    MINIMAP_ALIGNMENT.out
+    bam = MINIMAP_ALIGNMENT.out
 }

@@ -10,20 +10,16 @@ process BAMBU_CONSTRUCT_READ_CLASS{
 	path(bambu_annotation)
     
     output:
-    tuple val(sample), path("${sample}_readClassFile.rds"), val(meta)
+    tuple val(sample), path("${sample}_readClassFile.rds"), val(meta), emit: rds
 
     script:
     """
     #!/usr/bin/env Rscript
     library("bambu")
 
-    if ("$meta.barcode_map" == "true") {
-    demultiplexed = TRUE} else {
-    demultiplexed = "$meta.barcode_map"}
-
 	annotation <- readRDS("$bambu_annotation")
     readClassFile = bambu(reads = "$bam", annotations = annotation, genome = "$genome", 
-        ncore = $task.cpus, discovery = FALSE, quant = FALSE, demultiplexed = demultiplexed, 
+        ncore = $task.cpus, discovery = FALSE, quant = FALSE, demultiplexed = TRUE, 
         verbose = FALSE, assignDist = FALSE, processByChromosome = as.logical("$params.process_by_chromosome"), 
         yieldSize = 10000000, dedupUMI = as.logical("$params.deduplicate_umis"))
     saveRDS(readClassFile[[1]], "${sample}_readClassFile.rds") 

@@ -49,21 +49,21 @@ workflow {
     PARSE_SAMPLESHEET(ch_input, ch_barcode_coordinate_config)
 
     // input files are split by type (fastq, bam, rds)
-    ch_fastq_rows = PARSE_SAMPLESHEET.out.fastq
-    ch_bam_rows = PARSE_SAMPLESHEET.out.bam
-    ch_rds_rows = PARSE_SAMPLESHEET.out.rds
+    ch_input_fastq = PARSE_SAMPLESHEET.out.fastq
+    ch_input_bam = PARSE_SAMPLESHEET.out.bam
+    ch_input_rds = PARSE_SAMPLESHEET.out.rds
 
     // process fastq samples
-    PREPROCESS_FASTQ(ch_fastq_rows, ch_adapter_seq_config,  ch_flank_seq_config)
-    ALIGNMENT(PREPROCESS_FASTQ.out, ch_genome, ch_annotation)
+    PREPROCESS_FASTQ(ch_input_fastq, ch_adapter_seq_config,  ch_flank_seq_config)
+    ALIGNMENT(PREPROCESS_FASTQ.out.fastq, ch_genome, ch_annotation)
 
     // process bam samples
-    ch_bam_files = ALIGNMENT.out.concat(ch_bam_rows) // concatenate aligned bam files with input bam files
+    ch_bam_files = ALIGNMENT.out.bam.concat(ch_input_bam) // concatenate aligned bam files with input bam files
     ch_bambu_annotation = BAMBU_PREPARE_ANNOTATION(ch_annotation) // prepare annotation once for all samples
     BAMBU_CONSTRUCT_READ_CLASS(ch_bam_files, ch_genome, ch_bambu_annotation)
 
     // process rds samples
-    ch_rds_files = BAMBU_CONSTRUCT_READ_CLASS.out.concat(ch_rds_rows) // concatenate constructed read class rds files with input rds files
+    ch_rds_files = BAMBU_CONSTRUCT_READ_CLASS.out.rds.concat(ch_input_rds) // concatenate constructed read class rds files with input rds files
     ch_rds_files_collect = ch_rds_files.collect(flat:false).map { it.transpose() } // collect all rds files into a single tuple
     BAMBU(ch_rds_files_collect, ch_genome, ch_bambu_annotation, ndr, run_clustering)
 	
