@@ -12,9 +12,11 @@ include { BAMBU_EM } from './modules/bambu_EM.nf'
 
 workflow {
     def ndr = params.ndr ?: 'NULL'
-    def run_em = params.quantification_mode != 'no_EM'
+    def run_read_class_construction = params.early_stop_stage != 'bam'
+    def run_bambu_discovery = params.early_stop_stage == null
     def run_clustering = params.quantification_mode == 'EM_clusters'
-
+    def run_bambu_em = run_bambu_discovery && params.quantification_mode != 'no_EM' 
+    
     // checking required params
     if (!params.input) {
         error "params.input is not set — please provide a path to a CSV samplesheet"
@@ -55,19 +57,23 @@ workflow {
 
     // process fastq samples
     PREPROCESS_FASTQ(ch_input_fastq, ch_adapter_seq_config,  ch_flank_seq_config)
-    ALIGNMENT(PREPROCESS_FASTQ.out.fastq, ch_genome, ch_annotation)
+    ALIGNMENT(PREPROCESS_FASTQ.out.fastq, ch_genome, ch_annotation, ch_input_fastq.count()) // fastq count is used to ensure paftools and minimap build index are skipped when there are no fastq samples
 
     // process bam samples
-    ch_bam_files = ALIGNMENT.out.bam.concat(ch_input_bam) // concatenate aligned bam files with input bam files
-    ch_bambu_annotation = BAMBU_PREPARE_ANNOTATION(ch_annotation) // prepare annotation once for all samples
-    BAMBU_CONSTRUCT_READ_CLASS(ch_bam_files, ch_genome, ch_bambu_annotation)
+    if (run_read_class_construction) {
+        ch_bam_files = ALIGNMENT.out.bam.concat(ch_input_bam) // concatenate aligned bam files with input bam files
+        ch_bambu_annotation = BAMBU_PREPARE_ANNOTATION(ch_annotation) // prepare annotation once for all samples
+        BAMBU_CONSTRUCT_READ_CLASS(ch_bam_files, ch_genome, ch_bambu_annotation)
+    }
 
     // process rds samples
-    ch_rds_files = BAMBU_CONSTRUCT_READ_CLASS.out.rds.concat(ch_input_rds) // concatenate constructed read class rds files with input rds files
-    ch_rds_files_collect = ch_rds_files.collect(flat:false).map { it.transpose() } // collect all rds files into a single tuple
-    BAMBU(ch_rds_files_collect, ch_genome, ch_bambu_annotation, ndr, run_clustering)
-	
-    if(run_em){
-    BAMBU_EM(ch_rds_files_collect, BAMBU.out.quant_data, BAMBU.out.extended_annotations, BAMBU.out.clusters, ch_genome)
-	}
+    if (run_bambu_discovery) {
+        ch_rds_files = BAMBU_CONSTRUCT_READ_CLASS.out.rds.concat(ch_input_rds) // concatenate constructed read class rds files with input rds files
+        ch_rds_files_collect = ch_rds_files.collect(flat:false).map { it.transpose() } // collect all rds files into a single tuple
+        BAMBU(ch_rds_files_collect, ch_genome, ch_bambu_annotation, ndr, run_clustering)
+    }
+
+    if (run_bambu_em) {
+        BAMBU_EM(ch_rds_files_collect, BAMBU.out.quant_data, BAMBU.out.extended_annotations, BAMBU.out.clusters, ch_genome)
+    }
 }

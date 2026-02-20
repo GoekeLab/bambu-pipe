@@ -1,5 +1,6 @@
 process BAMBU_CONSTRUCT_READ_CLASS{
     container "ghcr.io/ch99l/bambu-pipe-r:latest"
+    publishDir "$params.output_dir", mode: 'copy'
     label "low_cpu"
     label "high_mem"
     label "medium"
