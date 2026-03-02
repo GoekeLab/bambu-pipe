@@ -53,7 +53,8 @@ process MINIMAP_ALIGNMENT{
     path(bed)
 
 	output: 
-	tuple val(sample), path("${sample}_demultiplexed.bam"), val(meta)
+	tuple val(sample), path("${sample}_demultiplexed.bam"), val(meta), emit: bam
+    path("${sample}_demultiplexed.bam.bai")
 
 	script:
 	""" 
@@ -89,5 +90,5 @@ workflow ALIGNMENT {
     MINIMAP_ALIGNMENT(ch_unaligned_fastq, MINIMAP_BUILD_INDEX.out, PAFTOOLS_GFF2BED.out)
     
     emit:
-    bam = MINIMAP_ALIGNMENT.out
+    bam = MINIMAP_ALIGNMENT.out.bam
 }

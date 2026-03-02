@@ -48,12 +48,18 @@ process DEMULTIPLEX{
         cp $whitelist whitelist.txt
     fi
 
+    if [[ $meta.chemistry == 10x5* ]]; then
+        flexiplex_f=$params.flexiplex_f_5prime
+    else
+        flexiplex_f=$params.flexiplex_f_3prime
+    fi
+
     IFS=',' read -r _ left_flank barcode umi right_flank < <(awk -F',' -v chem=$meta.chemistry '\$1 == chem' $flank_seq_config)
     flank_seq="-x \$left_flank -b \$barcode -u \$umi -x \$right_flank"
 
 	flexiplex -p $task.cpus \$flank_seq -f 0 \$fastq_file
 	flexiplex-filter -w whitelist.txt --outfile my_filtered_barcode_list.txt flexiplex_barcodes_counts.txt 
-    flexiplex -p $task.cpus -k my_filtered_barcode_list.txt \$flank_seq -f $params.flexiplex_f -e $params.flexiplex_e \$fastq_file > ${sample}_flexiplexfilter_reads.fastq
+    flexiplex -p $task.cpus -k my_filtered_barcode_list.txt \$flank_seq -f \$flexiplex_f -e $params.flexiplex_e \$fastq_file > ${sample}_flexiplexfilter_reads.fastq
 
     if [[ $params.compress_intermediate == "true" ]]; then
         rm flexiplex_input_reads.fastq
@@ -85,11 +91,10 @@ process TRIM_AND_ORIENT{
         cutadapt -b \$fwd_primer_f -b \$fwd_primer_r -b \$TSO_f -b \$TSO_r -b \$rev_primer_f -b \$rev_primer_r --action none --discard \
         --cores $task.cpus -o ${sample}_preprocessed_reads.fastq - # For 5' preparation kits, reads are already in the transcript direction 
 
-    elif [[ $meta.chemistry == 10x3* || $meta.chemistry == visium-v* ]]; then
+    else
         cutadapt -a \$rev_primer_f --cores $task.cpus $fastq | \
         cutadapt -b \$fwd_primer_f -b \$fwd_primer_r -b \$rev_primer_f -b \$rev_primer_r --action none --discard --cores $task.cpus - | \
         reverse_complement_fastq.py -i - -o ${sample}_preprocessed_reads.fastq # For 3' preparation kits, orient reads in the transcript direction to improve minimap alignment
-        
     fi
 
     if [[ $params.compress_intermediate == "true" ]]; then
