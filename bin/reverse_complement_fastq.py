@@ -71,10 +71,10 @@ def reverse_phred_scores(phred_scores):
     Reverses Phred Quality Sequence
 
     Args:
-        phred_scores (list): Phred quality score of the forward strand
+        phred_scores (str): Phred quality score of the forward strand
 
     Returns:
-        list: Phred quality score of the reverse complement
+        str: Phred quality score of the reverse complement
     """
     return phred_scores[::-1]
 
@@ -87,28 +87,30 @@ if __name__ == "__main__":
     # Track number of reads processed
     reads_processed = 0
 
-    with f_in, f_out:
-        while True:
-            # Retrieve information for each read (stored in 4 lines)
-            header = f_in.readline().rstrip()
-            # Stop once header is empty
-            if not header: 
-                break
-            
-            dna_seq = f_in.readline().rstrip()
-            f_in.readline() # Read separator line but do not store it
-            phred_seq = f_in.readline().rstrip()
-            
-            # Get header, DNA sequence and Phred sequence for reverse complement
-            rc_header = modify_read_description(header)
-            rc_dna_seq = reverse_complement_seq(dna_seq)
-            rc_phred_seq = reverse_phred_scores(phred_seq)
+    while True:
+        # Retrieve information for each read (stored in 4 lines)
+        header = f_in.readline().rstrip()
+        # Stop once header is empty
+        if not header: 
+            break
+        
+        dna_seq = f_in.readline().rstrip()
+        f_in.readline() # Read separator line but do not store it
+        phred_seq = f_in.readline().rstrip()
+        
+        # Get header, DNA sequence and Phred sequence for reverse complement
+        rc_header = modify_read_description(header)
+        rc_dna_seq = reverse_complement_seq(dna_seq)
+        rc_phred_seq = reverse_phred_scores(phred_seq)
 
-            # Write output
-            f_out.write(f"{rc_header}\n{rc_dna_seq}\n+\n{rc_phred_seq}\n")
+        # Write output
+        f_out.write(f"{rc_header}\n{rc_dna_seq}\n+\n{rc_phred_seq}\n")
 
-            # Increment read counter
-            reads_processed += 1
-            if reads_processed % 1000000 == 0:
-                sys.stderr.write(f"\rProcessed {reads_processed/1000000} million reads")
+        # Increment read counter
+        reads_processed += 1
+        if reads_processed % 1000000 == 0:
+            sys.stderr.write(f"\rProcessed {reads_processed/1000000} million reads")
 
+    # Close file handles if not stdin/stdout
+    if args.input != '-': f_in.close()
+    if args.output != '-': f_out.close()

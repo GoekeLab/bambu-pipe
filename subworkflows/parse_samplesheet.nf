@@ -7,7 +7,7 @@ process EXTRACT_10X_BARCODES {
     path(barcode_coordinate_config)
 
     output:
-    tuple val(chemistry), path("*.txt*")
+    tuple val(chemistry), path("${chemistry}_barcode.txt")
 
     script:
     """
@@ -15,7 +15,11 @@ process EXTRACT_10X_BARCODES {
     IFS=',' read -r _ bc_filename _ < <(awk -F',' -v chem=$chemistry '\$1 == chem' $barcode_coordinate_config)
 
     # extract 10x barcode file from spaceranger container (used for subsequent processes)
-    cp $params.cellranger_dir/\$bc_filename .
+    if [[ \$bc_filename == *.gz ]]; then
+        gunzip -c $params.cellranger_dir/\$bc_filename > ./${chemistry}_barcode.txt
+    else
+        cp $params.cellranger_dir/\$bc_filename ./${chemistry}_barcode.txt
+    fi
     """
 }
 
@@ -28,7 +32,7 @@ process EXTRACT_10X_SPATIAL_COORDINATES {
     path(barcode_coordinate_config)
 
     output:
-    tuple val(chemistry), path("*.txt*")
+    tuple val(chemistry), path("${chemistry}_spatial_coordinates.txt")
 
     script:
     """
@@ -36,10 +40,12 @@ process EXTRACT_10X_SPATIAL_COORDINATES {
     IFS=',' read -r _ _ sc_filename < <(awk -F',' -v chem=$chemistry '\$1 == chem' $barcode_coordinate_config)
 
     # extract spatial coordinate file from spaceranger container (used for subsequent processes)
-    if [[ $chemistry == visium* ]]; then
-        cp $params.cellranger_dir/\$sc_filename .
+    # TODO: All visium coordinates file are not gzipped. In the future if there are gzipped files, include decompression)
+    if [[ $chemistry == visium* ]]; then 
+        cp $params.cellranger_dir/\$sc_filename ./${chemistry}_spatial_coordinates.txt
+        sed -i '1ibarcode\tx_coordinate\ty_coordinate' ./${chemistry}_spatial_coordinates.txt # adding header to spatial coordinates file as it is required for bambu
     else
-        touch dummy_spatial_coordinates.txt # create empty file for non-visium chemistries
+        touch ./${chemistry}_spatial_coordinates.txt # create empty file for non-visium chemistries
     fi
     """
 }
@@ -56,7 +62,10 @@ workflow PARSE_SAMPLESHEET {
             chemistry: row.containsKey("chemistry") ? row.chemistry : params.chemistry,
             technology: row.containsKey("technology") ? row.technology : params.technology
             ]
-        [row.sample, file(row.path), meta]
+        // check if file exists at path specified
+        def sample_path = file(row.path, checkIfExists: true)
+
+        [row.sample, sample_path, meta]
     }
 
     // extract distinct chemistries from metadata

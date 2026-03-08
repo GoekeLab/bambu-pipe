@@ -3,7 +3,7 @@
 nextflow.enable.dsl=2
 
 include { PARSE_SAMPLESHEET } from './subworkflows/parse_samplesheet.nf'
-include { PREPROCESS_FASTQ } from './subworkflows/preprocess_fastq.nf'
+include { PREPROCESS_FASTQ } from './modules/preprocess_fastq.nf'
 include { ALIGNMENT } from './subworkflows/alignment.nf'
 include { BAMBU_CONSTRUCT_READ_CLASS } from './modules/bambu_construct_read_class.nf'
 include { BAMBU_PREPARE_ANNOTATION } from './modules/bambu_prepare_annotation.nf'
@@ -56,14 +56,15 @@ workflow {
     ch_input_rds = PARSE_SAMPLESHEET.out.rds
 
     // process fastq samples
-    PREPROCESS_FASTQ(ch_input_fastq, ch_adapter_seq_config,  ch_flank_seq_config)
+    ch_preprocess_fastq_in = ch_input_fastq.map { sample, path, meta -> [sample, path, meta, meta.barcode] } // add whitelist path to fastq input tuple
+    PREPROCESS_FASTQ(ch_preprocess_fastq_in, ch_flank_seq_config, ch_adapter_seq_config)
     ALIGNMENT(PREPROCESS_FASTQ.out.fastq, ch_genome, ch_annotation, ch_input_fastq.count()) // fastq count is used to ensure paftools and minimap build index are skipped when there are no fastq samples
 
     // process bam samples
     if (run_read_class_construction) {
         ch_bam_files = ALIGNMENT.out.bam.concat(ch_input_bam) // concatenate aligned bam files with input bam files
-        ch_bambu_annotation = BAMBU_PREPARE_ANNOTATION(ch_annotation) // prepare annotation once for all samples
-        BAMBU_CONSTRUCT_READ_CLASS(ch_bam_files, ch_genome, ch_bambu_annotation)
+        BAMBU_PREPARE_ANNOTATION(ch_annotation) // prepare annotation once for all samples
+        BAMBU_CONSTRUCT_READ_CLASS(ch_bam_files, ch_genome, BAMBU_PREPARE_ANNOTATION.out)
     }
 
     // process rds samples
