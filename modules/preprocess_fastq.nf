@@ -20,7 +20,7 @@ process PREPROCESS_FASTQ {
     script:
     """
     #=======================================================================================================
-    # Helper functions
+    # Helper functions (All functions read from stdin and write to stdout)
     #=======================================================================================================
     # Decompress input FASTQ using parallel gzip (pigz) for faster processing
     decompress() {
@@ -91,7 +91,7 @@ process PREPROCESS_FASTQ {
     }
 
     #=======================================================================================================
-    # Executing preprocessing steps (Use chained commands to avoid writing large intermediate files to disk)
+    # Executing preprocessing steps (Pipe stdin/stdout to avoid writing large intermediate files to disk)
     #=======================================================================================================
     # Chain commands: Decompression -> (Optional) Quality score filtering with chopper -> (Optional) Save intermediate file after quality filtering
     decompress | chopper_cmd | save_intermediate "${sample}_intermediate_qfilter.fastq.gz" > ${sample}_chopper_out.fastq
