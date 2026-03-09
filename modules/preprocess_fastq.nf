@@ -61,7 +61,7 @@ process PREPROCESS_FASTQ {
             flexiplex_f=$params.flexiplex_f_3prime
         fi
 
-        flexiplex -p $task.cpus -k \$barcode_list \$flank_seq -f \$flexiplex_f -e $params.flexiplex_e -
+        flexiplex -p $task.cpus -k \$barcode_list \$flank_seq -f \$flexiplex_f -e $params.flexiplex_e
     }
 
     # Trims reverse primer with cutadapt
