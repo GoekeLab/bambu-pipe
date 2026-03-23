@@ -6,7 +6,7 @@ process BAMBU{
     label "medium"
 
 	input:
-    tuple val(sample), path(rds_files), val(meta)
+    tuple val(sample), path(rds_files), val(meta), path(spatial_metadata_files)
 	path(genome)
 	path(bambu_annotation)
     val(ndr)
@@ -28,15 +28,14 @@ process BAMBU{
     runName = if (length(idNames) == 1) idNames[1] else "combined"
     annotation <- readRDS("$bambu_annotation")
     readClassFile <- strsplit("${rds_files.join(',')}", ",")[[1]]
+    sampleData <- strsplit("${spatial_metadata_files.join(',')}", ",")[[1]]
     
-    ## TODO: Spatial whitelist should be NULL, string or an array
-    #if (grepl("visium-v", "$meta.chemistry")) {
-    #    df <- read.csv("${projectDir}/10x_config/spatial_coordinate_config.csv")
-    #    spatial_whitelist <- df\$spatial_coordinate_path[df\$technology == "$meta.chemistry"]
-    #} else {
-    #    spatial_whitelist = NULL
-    #}
-    spatial_whitelist = NULL
+    # Set sampleData to NA/NULL for non-spatial samples
+    if (!as.logical("$params.visium_hd")) {
+        contains_visium_standard <- grepl("visium-v", sampleData)
+        sampleData[!contains_visium_standard] <- NA
+        sampleData <- if (all(is.na(sampleData))) NULL else sampleData
+    }
 
     # Transcript discovery
     extendedAnno = bambu(reads = readClassFile, annotations = annotation, genome = "$genome", ncore = $task.cpus, 
@@ -46,7 +45,7 @@ process BAMBU{
     # Quantification without EM
     se = bambu(reads = readClassFile, annotations = extendedAnno, genome = "$genome", ncore = $task.cpus, 
     discovery = FALSE, quant = FALSE, demultiplexed = TRUE, verbose = FALSE, 
-    opt.em = list(degradationBias = FALSE), assignDist = TRUE, spatial = spatial_whitelist)
+    opt.em = list(degradationBias = FALSE), assignDist = TRUE, sampleData = sampleData)
     saveRDS(se, paste0(runName, "_quantData.rds"))
 
     # Seurat Clustering (if no clustering provided, automatically cluster)

@@ -2,7 +2,7 @@
 
 nextflow.enable.dsl=2
 
-include { PARSE_SAMPLESHEET } from './subworkflows/parse_samplesheet.nf'
+include { PREPARE_INPUT_STANDARD } from './subworkflows/prepare_input_standard.nf'
 include { PREPROCESS_FASTQ } from './modules/preprocess_fastq.nf'
 include { ALIGNMENT } from './subworkflows/alignment.nf'
 include { BAMBU_CONSTRUCT_READ_CLASS } from './modules/bambu_construct_read_class.nf'
@@ -48,12 +48,13 @@ workflow {
         }
         return file
     }
-    PARSE_SAMPLESHEET(ch_input, ch_barcode_coordinate_config)
+
+    PREPARE_INPUT_STANDARD(ch_input, ch_barcode_coordinate_config)
 
     // input files are split by type (fastq, bam, rds)
-    ch_input_fastq = PARSE_SAMPLESHEET.out.fastq
-    ch_input_bam = PARSE_SAMPLESHEET.out.bam
-    ch_input_rds = PARSE_SAMPLESHEET.out.rds
+    ch_input_fastq = PREPARE_INPUT_STANDARD.out.fastq
+    ch_input_bam = PREPARE_INPUT_STANDARD.out.bam
+    ch_input_rds = PREPARE_INPUT_STANDARD.out.rds
 
     // process fastq samples
     ch_preprocess_fastq_in = ch_input_fastq.map { sample, path, meta -> [sample, path, meta, meta.barcode] } // add whitelist path to fastq input tuple
@@ -70,7 +71,11 @@ workflow {
     // process rds samples
     if (run_bambu_discovery) {
         ch_rds_files = BAMBU_CONSTRUCT_READ_CLASS.out.rds.concat(ch_input_rds) // concatenate constructed read class rds files with input rds files
-        ch_rds_files_collect = ch_rds_files.collect(flat:false).map { it.transpose() } // collect all rds files into a single tuple
+        // reshape and collect rds file channel 
+        ch_rds_files_collect = ch_rds_files
+        .map { sample, path, meta -> [sample, path, meta, meta.spatial_metadata] }
+        .collect(flat:false) 
+        .map { it.transpose() } 
         BAMBU(ch_rds_files_collect, ch_genome, ch_bambu_annotation, ndr, run_clustering)
     }
 

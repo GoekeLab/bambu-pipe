@@ -4,7 +4,7 @@ process PREPROCESS_FASTQ {
     label "medium_mem"
     label "long"
 
-    publishDir params.output_dir,
+    publishDir "$params.output_dir/intermediate_fastq",
         mode: 'symlink',
         enabled: params.save_intermediates
     

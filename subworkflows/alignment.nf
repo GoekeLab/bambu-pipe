@@ -41,7 +41,7 @@ process PAFTOOLS_GFF2BED {
 }
 
 process MINIMAP_ALIGNMENT{
-    publishDir "$params.output_dir", mode: 'copy' 
+    publishDir "${params.output_dir}/bam", mode: 'copy' 
     container "ghcr.io/ch99l/bambu-pipe-alignment:latest"
     label "high_cpu"
     label "high_mem"

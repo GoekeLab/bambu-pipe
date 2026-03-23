@@ -50,7 +50,7 @@ process EXTRACT_10X_SPATIAL_COORDINATES {
     """
 }
 
-workflow PARSE_SAMPLESHEET {
+workflow PREPARE_INPUT_STANDARD {
     take:
     ch_input
     ch_barcode_coordinate_config
@@ -82,7 +82,7 @@ workflow PARSE_SAMPLESHEET {
         .map { chem, sample, path, meta, bc, sc ->
             def updated_meta = meta + [
                 barcode: bc, 
-                spatial_coordinate: sc
+                spatial_metadata: sc
             ]
             return [sample, path, updated_meta]
     }
