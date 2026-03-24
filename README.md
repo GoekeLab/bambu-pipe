@@ -32,12 +32,13 @@ The latest version for each dependency is recommended.
 To run the pipeline, you must provide a CSV samplesheet, a reference genome, and a reference annotation file (see [Parameters](#parameters) section). The pipeline performs transcript discovery and quantification on either a single sample or multiple samples, as specified in the samplesheet. See the [Samplesheet (CSV)](#samplesheet-csv) section below for more details. 
 
 **Running the pipeline**
+
+The example below shows how to run the pipeline on a test dataset provided in `examples/`
 ``` 
 nextflow run $PWD/bambu-singlecell-spatial \
   --input $PWD/examples/samplesheet.csv \
   --genome $PWD/examples/Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa \
   --annotation $PWD/examples/Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf \
-  --output_dir output \
   -profile singularity,hpc
 ``` 
 
@@ -66,7 +67,7 @@ The following columns are required for each sample:
 - `sample`: sample name
 - `path`: path to the input file (FASTQ, BAM, or RDS)
 - `chemistry`: 10x library chemistry (see [Supported 10x Library Chemistries](#supported-10x-library-chemistries))
-- `technology`: sequencing technology (see [Supported Sequencing Technologies](#supported-long-read-sequencing-technology))
+- `technology`: sequencing technology (see [Supported Sequencing Technologies](#supported-sequencing-technologies))
 
 **Example Samplesheet (Single Sample)**
 | sample | path | chemistry | technology |
