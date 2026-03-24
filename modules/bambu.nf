@@ -1,5 +1,5 @@
 process BAMBU{ 
-    publishDir "$params.output_dir", mode: 'copy', pattern: '*extended_annotations.rds'
+    publishDir "$params.output_dir", mode: 'copy', pattern: '*extended_annotations.gtf'
     container "ghcr.io/ch99l/bambu-pipe-r:latest"
     label "medium_cpu"
     label "high_mem"
@@ -15,6 +15,7 @@ process BAMBU{
 	output: 
     path ('*quantData.rds'), emit: quant_data
 	path ('*extended_annotations.rds'), emit: extended_annotations
+    path ('*extended_annotations.gtf'), emit: extended_annotations_gtf
     path ('*_clusters.rds'), emit: clusters
 
 	script:
@@ -41,6 +42,7 @@ process BAMBU{
     extendedAnno = bambu(reads = readClassFile, annotations = annotation, genome = "$genome", ncore = $task.cpus, 
     discovery = TRUE, quant = FALSE, demultiplexed = TRUE, verbose = FALSE, assignDist = FALSE, NDR = $ndr)
     saveRDS(extendedAnno, paste0(runName, "_extended_annotations.rds"))
+    writeToGTF(extendedAnno, paste0(runName, "_extended_annotations.gtf"))
 
     # Quantification without EM
     se = bambu(reads = readClassFile, annotations = extendedAnno, genome = "$genome", ncore = $task.cpus, 
