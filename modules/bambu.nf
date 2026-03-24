@@ -32,11 +32,9 @@ process BAMBU{
     sampleData <- strsplit("${spatial_metadata_files.join(',')}", ",")[[1]]
     
     # Set sampleData to NA/NULL for non-spatial samples
-    if (!as.logical("$params.visium_hd")) {
-        contains_visium_standard <- grepl("visium-v", sampleData)
-        sampleData[!contains_visium_standard] <- NA
-        sampleData <- if (all(is.na(sampleData))) NULL else sampleData
-    }
+    contains_visium_standard <- grepl("visium-v", sampleData)
+    sampleData[!contains_visium_standard] <- NA
+    sampleData <- if (all(is.na(sampleData))) NULL else sampleData
 
     # Transcript discovery
     extendedAnno = bambu(reads = readClassFile, annotations = annotation, genome = "$genome", ncore = $task.cpus, 
