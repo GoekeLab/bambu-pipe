@@ -1,5 +1,5 @@
 process BAMBU{ 
-    publishDir "$params.output_dir", mode: 'copy', pattern: '*quantData.rds'
+    publishDir "$params.output_dir", mode: 'copy', pattern: '*extended_annotations.rds'
     container "ghcr.io/ch99l/bambu-pipe-r:latest"
     label "medium_cpu"
     label "high_mem"
