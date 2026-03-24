@@ -76,7 +76,7 @@ workflow {
         .map { sample, path, meta -> [sample, path, meta, meta.spatial_metadata] }
         .collect(flat:false) 
         .map { it.transpose() } 
-        BAMBU(ch_rds_files_collect, ch_genome, ch_bambu_annotation, ndr, run_clustering)
+        BAMBU(ch_rds_files_collect, ch_genome, BAMBU_PREPARE_ANNOTATION.out, ndr, run_clustering)
     }
 
     if (run_bambu_em) {
