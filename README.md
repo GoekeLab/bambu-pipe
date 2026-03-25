@@ -67,7 +67,7 @@ The samplesheet must include the following columns:
 - `chemistry`: 10x library chemistry (see [Supported 10x Library Chemistries](#supported-10x-library-chemistries))
 - `technology`: sequencing technology (`ONT` or `PacBio`)
 
-Note: The first row of the samplesheet must be a header containing the exact column names (`sample`, `path`, `chemistry`, `technology`). 
+Note: The first row of the samplesheet must be a header containing the exact column names: `sample`, `path`, `chemistry`, and `technology`. 
 
 **Supported Input Formats**
 
