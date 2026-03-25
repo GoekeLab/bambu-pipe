@@ -80,6 +80,7 @@ workflow {
     }
 
     if (run_bambu_em) {
-        BAMBU_EM(ch_rds_files_collect, BAMBU.out.quant_data, BAMBU.out.extended_annotations, BAMBU.out.clusters, ch_genome)
+        ch_rds_files_em = ch_rds_files_collect.map { samples, paths, metas, spatial -> [samples, paths, metas] } // remove spatial metadata from input tuple for EM step
+        BAMBU_EM(ch_rds_files_em, BAMBU.out.quant_data, BAMBU.out.extended_annotations, BAMBU.out.clusters, ch_genome)
     }
 }
