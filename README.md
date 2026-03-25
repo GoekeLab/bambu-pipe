@@ -81,16 +81,18 @@ The pipeline is designed to be flexible. Depending on your starting point in the
 For more details on starting the pipeline from specific stages, please refer to the [Advanced Usage]() section. 
 
 **Example Samplesheet (Single Sample)**
-| sample | path | chemistry | technology |
-|---|---|---|---|
-| sample1 | path/to/sample1_fastq.gz | 10x3v2 | ONT
+```csv
+sample,path,chemistry,technology
+sample1,path/to/sample1_fastq.gz,10x3v2,ONT
+```
 
 **Example Samplesheet (Multiple Samples)**
-| sample | path | chemistry | technology |
-|---|---|---|---|
-| sample1 | path/to/sample1_fastq.gz | 10x3v2 | ONT
-| sample2 | path/to/sample2_fastq.gz | 10x3v3 | PacBio
-| sample3 | path/to/sample3_fastq.gz | 10x3v4 | ONT
+```csv
+sample,path,chemistry,technology
+sample1,path/to/sample1_fastq.gz,10x3v2,ONT
+sample2,path/to/sample2_fastq.gz,10x3v3,PacBio
+sample3,path/to/sample3_fastq.gz,10x3v4,ONT
+```
 
 Note: A samplesheet template is provided at `examples/samplesheet.csv`.
 If all samples share the same library chemistry and/or sequencing technology, you may omit the `chemistry` and `technology` columns and use the `--chemistry` and `--technology` flags instead.
