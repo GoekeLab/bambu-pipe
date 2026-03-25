@@ -15,7 +15,7 @@ workflow {
     def run_read_class_construction = params.early_stop_stage != 'bam'
     def run_bambu_discovery = params.early_stop_stage == null
     def run_clustering = params.quantification_mode == 'EM_clusters'
-    def run_bambu_em = run_bambu_discovery && params.quantification_mode != 'no_EM' 
+    def run_bambu_em = run_bambu_discovery && params.quantification_mode != 'no_quant' 
     
     // checking required params
     if (!params.input) {
