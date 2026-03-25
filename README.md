@@ -1,6 +1,3 @@
-# **BETA**
-This is a pre-release version of the pipeline intended for testers only. Please use with caution.
-
 # **Context-Aware Transcript Quantification from Long Read Single-Cell and Spatial Transcriptomics data**
 This pipeline performs context-aware transcript discovery and quantification from long read single-cell and spatial transcriptomics data. The workflow consists of: 
 1. (Optional) Quality score filtering with [chopper](https://github.com/wdecoster/chopper)
@@ -47,7 +44,7 @@ nextflow run $PWD/bambu-singlecell-spatial \
 To configure the executor and container used by the pipeline, pass the following profile types through the `-profile` argument in Nextflow.  
 
 Container profiles:
-- `singularity`: use Sigularity images (recommended on HPC systems)
+- `singularity`: use Singularity images (recommended on HPC systems)
 - `docker`: use Docker images
 
 Executor profiles:
@@ -60,16 +57,17 @@ Note: By default, the executor for the `hpc` profile is set to 'slurm'. To chang
 
 ### **Samplesheet (CSV)**
 
-The pipeline requires a `.csv` formatted samplesheet to define the input data. This file is mandatory, regardless of the number of samples being processed. Each row in the samplesheet must represent a single sample and its corresponding file paths and metadata. 
+The pipeline requires a `.csv` formatted samplesheet to define the input data. This file is mandatory, regardless of the number of samples being processed. Each row in the samplesheet represents a single sample and its corresponding file path and metadata. 
 
 **Required Columns**
 
-The following columns must be present in the CSV:
-
-- `sample`: sample name
+The samplesheet must include the following columns:
+- `sample`: sample name (no spaces and non-alphanumeric characters)
 - `path`: path to the input file (FASTQ, BAM, or RDS)
 - `chemistry`: 10x library chemistry (see [Supported 10x Library Chemistries](#supported-10x-library-chemistries))
-- `technology`: sequencing technology (see [Supported Sequencing Technologies](#supported-sequencing-technologies))
+- `technology`: sequencing technology (`ONT` or `PacBio`)
+
+Note: The first row of the samplesheet must be a header containing the exact column names (`sample`, `path`, `chemistry`, `technology`). 
 
 **Supported Input Formats**
 
@@ -112,12 +110,6 @@ The following library chemistries are supported. Please specify the sample chemi
 - `visium-v5` (Visium CytAssist Spatial Gene Expression Slide 11mm; serial prefix V5)
 #
 
-### **Supported Sequencing Technologies**
-The following sequencing technologies are supported. Please specify the technology for each sample in the samplesheet as shown:
-- `ONT` (Oxford Nanopore Technologies)
-- `PacBio` (Pacific Biosciences)
-#
-
 ### **Parameters**
 
 **Mandatory**
@@ -134,12 +126,11 @@ The following sequencing technologies are supported. Please specify the technolo
   - "rds": Stops pipeline after Bambu read class construction
 - `--qscore_filtering` [boolean, default: true]: Enable or disable quality score filtering of reads
 - `--ndr` [float, default: null]: NDR threshold for Bambu transcript discovery. If not set, Bambu will recommend a suitable value
-- `--process_by_chromosome` [boolean, default: true]: If true, run Bambu steps separately for each chromosome to reduce memory usage
 - `--deduplicate_umis` [boolean, default: true]: If true, Bambu will perform UMI deduplication 
 - `--quantification_mode` [string, default: "EM_clusters"]: Quantification mode for transcript counts. Available options are:
-  - "no_EM": No EM quantification
-  - "EM": Perform EM quantification across all cells/spatial coordinates
-  - "EM_clusters": Performs pseudo-bulk clustering using [Seurat](https://satijalab.org/seurat/) followed by EM quantification at the cluster level
+  - "no_quant": Transcript quantification is not performed
+  - "EM": Performs transcript quantification for each cell/spatial coordinate
+  - "EM_clusters": Performs pseudo-bulk clustering using [Seurat](https://satijalab.org/seurat/) followed by transcript quantification at the cluster level
 - `--resolution` [float, default: 0.8]: Seurat clustering resolution
 #
 
@@ -186,11 +177,11 @@ Note: For single sample runs, the `extended_annotations.gtf` and `se.rds` are pr
 | <sample_name>_demultiplexed.bam.bai | BAM index for the corresponding BAM file
 | <sample_name>_readClassFile.rds |  An intermediate metadata file used by Bambu that contains the constructed read classes. This file can be used as input in subsequent runs to bypass the initial preprocessing and alignment steps. 
 | *_extended_annotations.gtf | A `.gtf` file containing the novel transcripts discovered by Bambu as well as the reference annotations provided by the user.
-| *_se.rds | A `RangedSummarizedExperiment` object containing count matrices (`.mtx`) from transcript quantification by Bambu. Depending on the `quantification_mode`, the matrices are provided at either pseudobulk or single-cell level. The rows of the matrices represent transcript names, while the columns follow the `sampleName_cellBarcode` or `sampleName_clusterId` naming convention.
+| *_se.rds | A [RangedSummarizedExperiment](https://www.rdocumentation.org/packages/SummarizedExperiment/versions/1.2.3/topics/RangedSummarizedExperiment-class) object containing count matrices (`.mtx`) from transcript quantification by Bambu. Depending on the `quantification_mode`, the matrices are provided at either pseudobulk or single-cell level. The rows of the matrices represent transcript names, while the columns follow the `sampleName_cellBarcode` or `sampleName_clusterId` naming convention.
 
 **Count Matrices**
 
-The `SummarizedExperiment` object contains four distrinct types of count matrices, which can be accessed in R using the `assays()` function. Depending on your analysis requirements you can choose from the following:
+The [RangedSummarizedExperiment](https://www.rdocumentation.org/packages/SummarizedExperiment/versions/1.2.3/topics/RangedSummarizedExperiment-class) object contains four distrinct types of count matrices, which can be accessed in R using the `assays()` function. Depending on your analysis requirements you can choose from the following:
 - `counts`: expression estimates
 - `CPM`: seqencing depth normalised estimates
 - `fullLengthCounts`: estimates of read counts mapped as full length reads for each transcript
@@ -201,9 +192,9 @@ The `SummarizedExperiment` object contains four distrinct types of count matrice
 ### **Spatial Analysis** ##
 The pipeline applies the same processing steps to both single-cell and spatial samples. However, for spatial data, the generated `SummarizedExperiment` object is appended with spatial mapping information, which is stored in `colData`.  
 
-**Example - Spatial Mapping Information (Non-Visium HD)**:
+**Example - Spatial Mapping Information (`visium-v*`)**:
 
-For non-Visium HD samples, `colData` contains the spatial barcode and the corresponding X and Y spatial coordinates. 
+For `visium-v*` samples, `colData` contains the spatial barcode and the corresponding X and Y spatial coordinates. 
 
 | Barcode            | X coordinate | Y coordinate| 
 |:---|:---|:---|
