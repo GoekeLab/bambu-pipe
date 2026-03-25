@@ -184,7 +184,7 @@ Note: For single sample runs, the `extended_annotations.gtf` and `se.rds` are pr
 | <sample_name>_demultiplexed.bam.bai | BAM index for the corresponding BAM file
 | <sample_name>_readClassFile.rds |  An intermediate metadata file used by Bambu that contains the constructed read classes. This file can be used as input in subsequent runs to bypass the initial preprocessing and alignment steps. 
 | *_extended_annotations.gtf | A `.gtf` file containing the novel transcripts discovered by Bambu as well as the reference annotations provided by the user.
-| *_se.rds | A RangedSummarizedExperiment object containing count matrices (`.mtx`) from transcript quantification by Bambu. Depending on the `quantification_mode`, the matrices are provided at either pseudobulk or single-cell level. The rows of the matrices represent transcript names, while the columns follow the `sampleName_cellBarcode` or `sampleName_clusterId` naming convention.
+| *_se.rds | A `RangedSummarizedExperiment` object containing count matrices (`.mtx`) from transcript quantification by Bambu. Depending on the `quantification_mode`, the matrices are provided at either pseudobulk or single-cell level. The rows of the matrices represent transcript names, while the columns follow the `sampleName_cellBarcode` or `sampleName_clusterId` naming convention.
 
 **Count Matrices**
 
@@ -201,7 +201,7 @@ The pipeline applies the same processing steps to both single-cell and spatial s
 
 **Example - Spatial Mapping Information (Non-Visium HD)**:
 
-For non-Visium HD samples, the SummarizedExperiment's colData contains the spatial barcode and the corresponding X and Y spatial coordinates. 
+For non-Visium HD samples, `colData` contains the spatial barcode and the corresponding X and Y spatial coordinates. 
 
 | Barcode            | X coordinate | Y coordinate| 
 |:---|:---|:---|
