@@ -191,10 +191,10 @@ Note: For single sample runs, the `extended_annotations.gtf` and `se.rds` are pr
 The `SummarizedExperiment` object contains four distrinct types of count matrices, which can be accessed in R using the `assays()` function. Depending on your analysis requirements you can choose from the following:
 - `counts`: expression estimates
 - `CPM`: seqencing depth normalised estimates
-- `fullLengthCounts`: estimates of read counts mapped s full length reads for each transcript
+- `fullLengthCounts`: estimates of read counts mapped as full length reads for each transcript
 - `uniqueCounts`: counts of reads that are uniquely mapped to each transcript 
 
-
+#
 
 ### **Spatial Analysis** ##
 The pipeline applies the same processing steps to both single-cell and spatial samples. However, for spatial data, the generated `SummarizedExperiment` object is appended with spatial mapping information, which is stored in `colData`.  
