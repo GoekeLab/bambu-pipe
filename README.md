@@ -97,7 +97,7 @@ If all samples share the same library chemistry and/or sequencing technology, yo
 #
 
 ### **Supported 10x Library Chemistries**
-The following library chemistries are supported. Please specify the sample chemistry in the samplesheet as shown:
+The following single cell and spatial library chemistries are supported. Please specify the sample chemistry in the samplesheet as shown:
 - `10x3v2` (Single Cell 3' v2)
 - `10x3v3` (Single Cell 3' v3 & Next GEM Single Cell 3' v3.1)
 - `10x3v4` (GEM-X Single Cell 3' v4)
