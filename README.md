@@ -21,7 +21,7 @@ The final output includes novel transcripts found in the sample and transcript l
 #
 
 ### **Installation** 
-To run this pipeline, you will need the following dependencies:
+Install the following dependencies before running the pipeline:
 - [Nextflow](https://www.nextflow.io/docs/latest/install.html) 
 - [Docker](https://docs.docker.com/engine/install/ubuntu/) (or [Singularity](https://docs.sylabs.io/guides/3.0/user-guide/installation.html_) if you do not have user permissions for Docker). 
 
@@ -29,11 +29,11 @@ The latest version for each dependency is recommended.
 #
 
 ### **General Usage** 
-To run the pipeline, you must provide a CSV samplesheet, a reference genome, and a reference annotation file (see [Parameters](#parameters) section). The pipeline performs transcript discovery and quantification on either a single sample or multiple samples, as specified in the samplesheet. See the [Samplesheet (CSV)](#samplesheet-csv) section below for more details. 
+To run the pipeline, you must provide a samplesheet, reference genome, and reference annotation file as input. The pipeline performs transcript discovery and quantification on either a single sample or on multiple samples based on the number of samples specified in the samplesheet. Refer to the [Parameters](#parameters) and [Samplesheet (CSV)](#samplesheet-csv) sections below for more details. 
 
 **Running the pipeline**
 
-The example below shows how to run the pipeline on a test dataset provided in `examples/`
+Use the command below to run the pipeline on the test data provided in `examples/`
 ``` 
 nextflow run $PWD/bambu-singlecell-spatial \
   --input $PWD/examples/samplesheet.csv \
@@ -42,7 +42,7 @@ nextflow run $PWD/bambu-singlecell-spatial \
   -profile singularity,hpc
 ``` 
 
-**Profiles**
+**Nextflow Profiles**
 
 To configure the executor and container used by the pipeline, pass the following profile types through the `-profile` argument in Nextflow.  
 
@@ -60,14 +60,25 @@ Note: By default, the executor for the `hpc` profile is set to 'slurm'. To chang
 
 ### **Samplesheet (CSV)**
 
-The samplesheet is always required, regardless of the number of samples you wish to perform transcript discovery and quantification on. Each row represents one sample and its associated input file and metadata. The sample can either be a compressed or uncompressed FASTQ, BAM, or RDS file depending on your starting point in the workflow (see Advanced Usage section for more information). 
+The pipeline requires a `.csv` formatted samplesheet to define the input data. This file is mandatory, regardless of the number of samples being processed. Each row in the samplesheet must represent a single sample and its corresponding file paths and metadata. 
 
-The following columns are required for each sample:
+**Required Columns**
+
+The following columns must be present in the CSV:
 
 - `sample`: sample name
 - `path`: path to the input file (FASTQ, BAM, or RDS)
 - `chemistry`: 10x library chemistry (see [Supported 10x Library Chemistries](#supported-10x-library-chemistries))
 - `technology`: sequencing technology (see [Supported Sequencing Technologies](#supported-sequencing-technologies))
+
+**Supported Input Formats**
+
+The pipeline is designed to be flexible. Depending on your starting point in the workflow, the `path` column can point to the following file types:
+- **FASTQ**: Raw reads (compressed `.gz` or uncompressed)
+- **BAM**: Demultiplexed and aligned reads
+- **RDS**: Pre-processed bambu read class objects
+
+For more details on starting the pipeline from specific stages, please refer to the [Advanced Usage]() section. 
 
 **Example Samplesheet (Single Sample)**
 | sample | path | chemistry | technology |
@@ -81,9 +92,8 @@ The following columns are required for each sample:
 | sample2 | path/to/sample2_fastq.gz | 10x3v3 | PacBio
 | sample3 | path/to/sample3_fastq.gz | 10x3v4 | ONT
 
-A samplesheet template is also provided at `examples/samplesheet.csv`
-
-Note: If all samples share the same chemistry and/or technology, you can omit the chemistry and technology columns in the samplesheet and use the `--chemistry` and `--technology` parameters instead.
+Note: A samplesheet template is provided at `examples/samplesheet.csv`.
+If all samples share the same library chemistry and/or sequencing technology, you may omit the `chemistry` and `technology` columns and use the `--chemistry` and `--technology` flags instead.
 #
 
 ### **Supported 10x Library Chemistries**
@@ -93,11 +103,11 @@ The following library chemistries are supported. Please specify the sample chemi
 - `10x3v4` (GEM-X Single Cell 3' v4)
 - `10x5v2` (Single Cell 5' v2)
 - `10x5v3` (GEM-X Single Cell 5' v3)
-- `visium-v1` (Visium Spatial Gene Expression Slide 6.5 mm; serial prefix **V1**)
-- `visium-v2` (Visium Spatial Gene Expression Slide 6.5 mm; serial prefix **V2**)
-- `visium-v3` (Visium Spatial Gene Expression Slide 6.5mm; serial prefix **V3**)
-- `visium-v4` (Visium CytAssist Spatial Gene Expression Slide 6.5mm; serial prefix **V4**)
-- `visium-v5` (Visium CytAssist Spatial Gene Expression Slide 11mm; serial prefix **V5**)
+- `visium-v1` (Visium Spatial Gene Expression Slide 6.5 mm; serial prefix V1)
+- `visium-v2` (Visium Spatial Gene Expression Slide 6.5 mm; serial prefix V2)
+- `visium-v3` (Visium Spatial Gene Expression Slide 6.5mm; serial prefix V3)
+- `visium-v4` (Visium CytAssist Spatial Gene Expression Slide 6.5mm; serial prefix V4)
+- `visium-v5` (Visium CytAssist Spatial Gene Expression Slide 11mm; serial prefix V5)
 #
 
 ### **Supported Sequencing Technologies**
@@ -132,7 +142,7 @@ The following sequencing technologies are supported. Please specify the technolo
 #
 
 ### **Output** ###
-After the run, all outputs are written to the directory specified by the `--outdir` parameter. The pipeline produces per-sample alignment files, per-sample read class files used by Bambu, and the combined transcript discovery and quantification results. An example output structure for a single sample and multi-sample run are shown below:
+All outputs from the pipeline are written to the directory specified by the `--outdir` parameter. The pipeline produces per-sample alignment files, per-sample read class files used by Bambu, and the combined transcript discovery and quantification results. The examples below show the output directory structure for both single and multi-sample runs:
 
 **Output Structure (Single Sample)**
 ```
@@ -165,19 +175,29 @@ output/
 └── combined_se.rds
 ```
 
+Note: For single sample runs, the `extended_annotations.gtf` and `se.rds` are prefixed with the `sample_name`. For multi-sample runs, the `combined` prefix is used instead. 
+
 **Description of the Output Files**
 | File | Description 
 |---|---
-| <sample_name>_demultiplexed.bam |
+| <sample_name>_demultiplexed.bam | BAM file containing demultiplexed, trimmed and aligned reads
 | <sample_name>_demultiplexed.bam.bai | BAM index for the corresponding BAM file
-| <sample_name>_readClassFile.rds |  
-| *_extended_annotations.gtf | 
-| *_se.rds 
+| <sample_name>_readClassFile.rds |  An intermediate metadata file used by Bambu the constructed read classes. This file can be used as input to the pipeline. 
+| *_extended_annotations.gtf | A `.gtf` file containing the novel transcripts discovered by Bambu as well as the reference annotations provided by the user.
+| *_se.rds | A RangedSummarizedExperiment object containing count matrices (`.mtx`) from transcript quantification by Bambu. Depending on the `quantification_mode`, the matrices are provided at either pseudobulk or single-cell level. The rows of the matrices represent transcript names, while the columns follow the `sampleName_cellBarcode` or `sampleName_clusterId` naming convention.
 
-#
+**Count Matrices**
+
+The `SummarizedExperiment` object contains four distrinct types of count matrices, which can be accessed in R using the `assays()` function. Depending on your analysis requirements you can choose from the following:
+- `counts`: expression estimates
+- `CPM`: seqencing depth normalised estimates
+- `fullLengthCounts`: estimates of read counts mapped s full length reads for each transcript
+- `uniqueCounts`: counts of reads that are uniquely mapped to each transcript 
+
+
 
 ### **Spatial Analysis** ##
-The pipeline applies the same processing steps to both single-cell and spatial samples. The primary difference is that, for spatial samples, the resulting `SummarisedExperiment` object includes additional spatial mapping information stored in the `colData` field. 
+The pipeline applies the same processing steps to both single-cell and spatial samples. However, for spatial data, the generated `SummarizedExperiment` object is appended with spatial mapping information, which is stored in `colData`.  
 
 **Example - Spatial Mapping Information (Non-Visium HD)**:
 
