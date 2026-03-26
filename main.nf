@@ -10,25 +10,38 @@ include { BAMBU_PREPARE_ANNOTATION } from './modules/bambu_prepare_annotation.nf
 include { BAMBU } from './modules/bambu.nf'
 include { BAMBU_EM } from './modules/bambu_EM.nf'
 
+def validateParams(params) {
+    // Required inputs
+    if (!params.input)
+        error "params.input is not set — please provide a path to a CSV samplesheet"
+    if (!params.genome)
+        error "params.genome is not set — please provide a path to the reference genome FASTA file"
+    if (!params.annotation)
+        error "params.annotation is not set — please provide a path to the reference annotation GTF file"
+
+    // Enum checks
+    if (!params.valid_quantification_modes.contains(params.quantification_mode))
+        error "Invalid params.quantification_mode '${params.quantification_mode}' — must be one of: ${params.valid_quantification_modes.join(', ')}"
+
+    if (!params.valid_early_stop_stages.contains(params.early_stop_stage))
+        error "Invalid params.early_stop_stage '${params.early_stop_stage}' — must be one of: rds, bam, or null"
+
+    // Numeric range checks
+    if (params.resolution <= 0)
+        error "Invalid params.resolution '${params.resolution}' — must be a positive number"
+
+    if (params.ndr != null && (params.ndr < 0 || params.ndr > 1))
+        error "Invalid params.ndr '${params.ndr}' — must be a float between 0 and 1"
+}
+
 workflow {
+    validateParams(params)
+
     def ndr = params.ndr ?: 'NULL'
     def run_read_class_construction = params.early_stop_stage != 'bam'
     def run_bambu_discovery = params.early_stop_stage == null
     def run_clustering = params.quantification_mode == 'EM_clusters'
-    def run_bambu_em = run_bambu_discovery && params.quantification_mode != 'no_quant' 
-    
-    // checking required params
-    if (!params.input) {
-        error "params.input is not set — please provide a path to a CSV samplesheet"
-    }
-
-    if (!params.genome) {
-        error "params.genome is not set — please provide a path to the reference genome FASTA file"
-    }
-
-    if (!params.annotation) {
-        error "params.annotation is not set — please provide a path to the reference annotation GTF file"
-    }
+    def run_bambu_em = run_bambu_discovery && params.quantification_mode != 'no_quant'
 
     // load reference files
     ch_genome =  Channel.value(file(params.genome, checkIfExists: true))

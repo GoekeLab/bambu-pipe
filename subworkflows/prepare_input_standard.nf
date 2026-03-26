@@ -58,10 +58,23 @@ workflow PREPARE_INPUT_STANDARD {
     main:
     // read samplesheet CSV into channel of tuples (sample, path, metadata)
     ch_samples = ch_input.splitCsv(header:true, sep:',')
-    .map { row -> def meta = [
-            chemistry: row.containsKey("chemistry") ? row.chemistry : params.chemistry,
-            technology: row.containsKey("technology") ? row.technology : params.technology
-            ]
+    .map { row ->
+        def chemistry = row.containsKey("chemistry") ? row.chemistry : params.chemistry
+        def technology = row.containsKey("technology") ? row.technology : params.technology
+
+        // validate chemistry and technology
+        if (!chemistry)
+            error "Sample '${row.sample}' is missing a chemistry — set it in the samplesheet or via params.chemistry"
+        if (!params.valid_chemistries.contains(chemistry))
+            error "Sample '${row.sample}' has invalid chemistry '${chemistry}' — must be one of: ${params.valid_chemistries.join(', ')}"
+
+        if (!technology)
+            error "Sample '${row.sample}' is missing a technology — set it in the samplesheet or via params.technology"
+        if (!params.valid_technologies.contains(technology))
+            error "Sample '${row.sample}' has invalid technology '${technology}' — must be one of: ${params.valid_technologies.join(', ')}"
+
+        def meta = [chemistry: chemistry, technology: technology]
+
         // check if file exists at path specified
         def sample_path = file(row.path, checkIfExists: true)
 
