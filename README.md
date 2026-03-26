@@ -48,7 +48,6 @@ Container profiles:
 - `docker`: use Docker images
 
 Executor profiles:
-- `local`: execute pipeline on a local machine (suitable for small datasets)
 - `hpc`: execute pipeline on an HPC system
 
 Note: By default, the executor for the `hpc` profile is set to 'slurm'. To change this, modify the nextflow.config file. 
