@@ -59,34 +59,26 @@ workflow PREPARE_INPUT_STANDARD {
     // read samplesheet CSV into channel of tuples (sample, path, metadata)
     ch_samples = ch_input.splitCsv(header:true, sep:',')
     .map { row ->
-        // validate samplesheet format and required columns
-        if (!row.containsKey("sample"))
-            error "Samplesheet is missing a required 'sample' column"
-        if (!row.sample)
-            error "A row in the samplesheet has an empty sample name"
+        // validate required columns exist and are non-empty
+        ["sample", "path"].each { col ->
+            if (!row.containsKey(col))
+                error "Samplesheet is missing a required '${col}' column"
+            if (!row[col])
+                error "A row in the samplesheet has an empty '${col}' value"
+        }
 
-        if (!row.containsKey("path"))
-            error "Samplesheet is missing a required 'path' column"
-        if (!row.path)
-            error "Sample '${row.sample}' has an empty 'path' value"
+        def sample_path = file(row.path, checkIfExists: true)
 
-        def sample_path = file(row.path, checkIfExists: true)  // check if file exists at path specified
-        
-        // validate chemistry and technology
-        def chemistry = row.containsKey("chemistry") ? row.chemistry : params.chemistry
-        def technology = row.containsKey("technology") ? row.technology : params.technology
-
-        if (!chemistry)
-            error "Sample '${row.sample}' is missing a chemistry — set it in the samplesheet or via params.chemistry"
-        if (!params.valid_chemistries.contains(chemistry))
-            error "Sample '${row.sample}' has invalid chemistry '${chemistry}' — must be one of: ${params.valid_chemistries.join(', ')}"
-
-        if (!technology)
-            error "Sample '${row.sample}' is missing a technology — set it in the samplesheet or via params.technology"
-        if (!params.valid_technologies.contains(technology))
-            error "Sample '${row.sample}' has invalid technology '${technology}' — must be one of: ${params.valid_technologies.join(', ')}"
-
-        def meta = [chemistry: chemistry, technology: technology]
+        // resolve chemistry and technology from row or params, then validate
+        def valid_options = [chemistry: params.valid_chemistries, technology: params.valid_technologies]
+        def meta = valid_options.collectEntries { col, valid_list ->
+            def val = row.containsKey(col) ? row[col] : params[col]
+            if (!val)
+                error "Sample '${row.sample}' is missing a ${col} — set it in the samplesheet or via params.${col}"
+            if (!valid_list.contains(val))
+                error "Sample '${row.sample}' has invalid ${col} '${val}' — must be one of: ${valid_list.join(', ')}"
+            [col, val]
+        }
 
         [row.sample, sample_path, meta]
     }
