@@ -206,16 +206,19 @@ For `visium-v*` samples, `colData` contains the spatial barcode and the correspo
 | AAACAACGAATAGTTC | 17 | 1 |
 | AAACAAGTATCTCCCA  | 103 | 51 |
 | AAACAATCTACTAGCA | 44 | 4 |
-#
+
+---
 
 ### **Visium HD Spatial Analysis (Under Development)**
 
 This feature is still under development and will be released in a future update.
-#
 
-### **Fusion Transcript Analysis (Under Development)** ##
+---
+
+### **Fusion Transcript Analysis (Under Development)**
 This feature is still under development and will be released in a future update.
-# 
+
+---
 
 ### **Additional Information**
 UMI correction is done at the barcode level. The longest read for each unique barcode-UMI combination is kept for analysis.
