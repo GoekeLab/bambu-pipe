@@ -8,7 +8,6 @@ This pipeline performs context-aware transcript discovery and quantification fro
 
 The final output includes novel transcripts found in the sample and transcript level count matrices for each barcode/spatial coordinate. 
 
----
 
 ### **Content** 
 - [Installation](#installation)
@@ -17,7 +16,6 @@ The final output includes novel transcripts found in the sample and transcript l
 - [Citation](#Citation)
 - [Contributors](#Contributors)
 
----
 
 ### **Installation** 
 Install the following dependencies before running the pipeline:
@@ -26,7 +24,6 @@ Install the following dependencies before running the pipeline:
 
 The latest version for each dependency is recommended. 
 
----
 
 ### **General Usage** 
 To run the pipeline, you must provide a samplesheet, reference genome, and reference annotation file as input. The pipeline performs transcript discovery and quantification on either a single sample or on multiple samples based on the number of samples specified in the samplesheet. Refer to the [Parameters](#parameters) and [Samplesheet (CSV)](#samplesheet-csv) sections below for more details. 
@@ -55,7 +52,6 @@ Executor profiles:
 
 Note: By default, the executor for the `hpc` profile is set to 'slurm'. To change this, modify the nextflow.config file. 
 
----
 
 ### **Samplesheet (CSV)**
 
@@ -97,7 +93,6 @@ sample3,path/to/sample3_fastq.gz,10x3v4,ONT
 Note: A samplesheet template is provided at `examples/samplesheet.csv`.
 If all samples share the same library chemistry and/or sequencing technology, you may omit the `chemistry` and `technology` columns and use the `--chemistry` and `--technology` flags instead.
 
----
 
 ### **Supported 10x Library Chemistries**
 The following single cell and spatial library chemistries are supported. Please specify the sample chemistry in the samplesheet as shown:
@@ -112,7 +107,6 @@ The following single cell and spatial library chemistries are supported. Please 
 - `visium-v4` (Visium CytAssist Spatial Gene Expression Slide 6.5mm; serial prefix V4)
 - `visium-v5` (Visium CytAssist Spatial Gene Expression Slide 11mm; serial prefix V5)
 
----
 
 ### **Parameters**
 
@@ -137,7 +131,6 @@ The following single cell and spatial library chemistries are supported. Please 
   - "EM_clusters": Performs pseudo-bulk clustering using [Seurat](https://satijalab.org/seurat/) followed by transcript quantification at the cluster level
 - `--resolution` [float, default: 0.8]: Seurat clustering resolution
 
----
 
 ### **Output** ###
 All outputs from the pipeline are written to the directory specified by the `--outdir` parameter. The pipeline produces per-sample alignment files, per-sample read class files used by Bambu, and the combined transcript discovery and quantification results. The examples below show the output directory structure for both single and multi-sample runs:
@@ -192,7 +185,6 @@ The [RangedSummarizedExperiment](https://www.rdocumentation.org/packages/Summari
 - `fullLengthCounts`: estimates of read counts mapped as full length reads for each transcript
 - `uniqueCounts`: counts of reads that are uniquely mapped to each transcript 
 
----
 
 ### **Spatial Analysis** ##
 The pipeline applies the same processing steps to both single-cell and spatial samples. However, for spatial data, the generated `SummarizedExperiment` object is appended with spatial mapping information, which is stored in `colData`.  
@@ -207,18 +199,15 @@ For `visium-v*` samples, `colData` contains the spatial barcode and the correspo
 | AAACAAGTATCTCCCA  | 103 | 51 |
 | AAACAATCTACTAGCA | 44 | 4 |
 
----
 
 ### **Visium HD Spatial Analysis (Under Development)**
 
 This feature is still under development and will be released in a future update.
 
----
 
 ### **Fusion Transcript Analysis (Under Development)**
 This feature is still under development and will be released in a future update.
 
----
 
 ### **Additional Information**
 UMI correction is done at the barcode level. The longest read for each unique barcode-UMI combination is kept for analysis.
