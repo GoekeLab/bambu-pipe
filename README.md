@@ -7,7 +7,8 @@ This pipeline performs context-aware transcript discovery and quantification fro
 5. Transcript discovery and quantification with [Bambu](https://github.com/GoekeLab/bambu/tree/BambuDev).
 
 The final output includes novel transcripts found in the sample and transcript level count matrices for each barcode/spatial coordinate. 
-#
+
+---
 
 ### **Content** 
 - [Installation](#installation)
@@ -15,7 +16,8 @@ The final output includes novel transcripts found in the sample and transcript l
 - [Release History](#Release-History)
 - [Citation](#Citation)
 - [Contributors](#Contributors)
-#
+
+---
 
 ### **Installation** 
 Install the following dependencies before running the pipeline:
@@ -23,7 +25,8 @@ Install the following dependencies before running the pipeline:
 - [Docker](https://docs.docker.com/engine/install/ubuntu/) (or [Singularity](https://docs.sylabs.io/guides/3.0/user-guide/installation.html_) if you do not have user permissions for Docker). 
 
 The latest version for each dependency is recommended. 
-#
+
+---
 
 ### **General Usage** 
 To run the pipeline, you must provide a samplesheet, reference genome, and reference annotation file as input. The pipeline performs transcript discovery and quantification on either a single sample or on multiple samples based on the number of samples specified in the samplesheet. Refer to the [Parameters](#parameters) and [Samplesheet (CSV)](#samplesheet-csv) sections below for more details. 
@@ -52,7 +55,7 @@ Executor profiles:
 
 Note: By default, the executor for the `hpc` profile is set to 'slurm'. To change this, modify the nextflow.config file. 
 
-#
+---
 
 ### **Samplesheet (CSV)**
 
@@ -93,7 +96,8 @@ sample3,path/to/sample3_fastq.gz,10x3v4,ONT
 
 Note: A samplesheet template is provided at `examples/samplesheet.csv`.
 If all samples share the same library chemistry and/or sequencing technology, you may omit the `chemistry` and `technology` columns and use the `--chemistry` and `--technology` flags instead.
-#
+
+---
 
 ### **Supported 10x Library Chemistries**
 The following single cell and spatial library chemistries are supported. Please specify the sample chemistry in the samplesheet as shown:
@@ -107,7 +111,8 @@ The following single cell and spatial library chemistries are supported. Please 
 - `visium-v3` (Visium Spatial Gene Expression Slide 6.5mm; serial prefix V3)
 - `visium-v4` (Visium CytAssist Spatial Gene Expression Slide 6.5mm; serial prefix V4)
 - `visium-v5` (Visium CytAssist Spatial Gene Expression Slide 11mm; serial prefix V5)
-#
+
+---
 
 ### **Parameters**
 
@@ -120,7 +125,7 @@ The following single cell and spatial library chemistries are supported. Please 
 - `--outdir` [string, default: 'output']: Path to the output directory
 - `--chemistry` [string, default: null]: Specify if all samples in the samplesheet share the same library chemistry 
 - `--technology` [string, default: null]: Specify if all samples in the samplesheet share the same sequencing technology
-- `early_stop_stage` [string, default: null]: Stop the pipeline early and output intermediate files (see Advanced Usage section). Options:
+- `--early_stop_stage` [string, default: null]: Stop the pipeline early and output intermediate files (see Advanced Usage section). Options:
   - "bam": Stops pipeline after minimap2 alignment
   - "rds": Stops pipeline after Bambu read class construction
 - `--qscore_filtering` [boolean, default: true]: Enable or disable quality score filtering of reads
@@ -131,7 +136,8 @@ The following single cell and spatial library chemistries are supported. Please 
   - "EM": Performs transcript quantification for each cell/spatial coordinate
   - "EM_clusters": Performs pseudo-bulk clustering using [Seurat](https://satijalab.org/seurat/) followed by transcript quantification at the cluster level
 - `--resolution` [float, default: 0.8]: Seurat clustering resolution
-#
+
+---
 
 ### **Output** ###
 All outputs from the pipeline are written to the directory specified by the `--outdir` parameter. The pipeline produces per-sample alignment files, per-sample read class files used by Bambu, and the combined transcript discovery and quantification results. The examples below show the output directory structure for both single and multi-sample runs:
@@ -180,13 +186,13 @@ Note: For single sample runs, the `extended_annotations.gtf` and `se.rds` are pr
 
 **Count Matrices**
 
-The [RangedSummarizedExperiment](https://www.rdocumentation.org/packages/SummarizedExperiment/versions/1.2.3/topics/RangedSummarizedExperiment-class) object contains four distrinct types of count matrices, which can be accessed in R using the `assays()` function. Depending on your analysis requirements you can choose from the following:
+The [RangedSummarizedExperiment](https://www.rdocumentation.org/packages/SummarizedExperiment/versions/1.2.3/topics/RangedSummarizedExperiment-class) object contains four distinct types of count matrices, which can be accessed in R using the `assays()` function. Depending on your analysis requirements you can choose from the following:
 - `counts`: expression estimates
 - `CPM`: seqencing depth normalised estimates
 - `fullLengthCounts`: estimates of read counts mapped as full length reads for each transcript
 - `uniqueCounts`: counts of reads that are uniquely mapped to each transcript 
 
-#
+---
 
 ### **Spatial Analysis** ##
 The pipeline applies the same processing steps to both single-cell and spatial samples. However, for spatial data, the generated `SummarizedExperiment` object is appended with spatial mapping information, which is stored in `colData`.  
