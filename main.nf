@@ -8,6 +8,7 @@ include { ALIGNMENT } from './subworkflows/alignment.nf'
 include { BAMBU_CONSTRUCT_READ_CLASS } from './modules/bambu_construct_read_class.nf'
 include { BAMBU_PREPARE_ANNOTATION } from './modules/bambu_prepare_annotation.nf'
 include { BAMBU } from './modules/bambu.nf'
+include { SEURAT_CLUSTERING } from './modules/seurat_clustering.nf'
 include { BAMBU_EM } from './modules/bambu_EM.nf'
 
 def validateParams(params) {
@@ -89,11 +90,12 @@ workflow {
         .map { sample, path, meta -> [sample, path, meta, meta.spatial_metadata] }
         .collect(flat:false) 
         .map { it.transpose() } 
-        BAMBU(ch_rds_files_collect, ch_genome, BAMBU_PREPARE_ANNOTATION.out, ndr, run_clustering)
+        BAMBU(ch_rds_files_collect, ch_genome, BAMBU_PREPARE_ANNOTATION.out, ndr)
     }
 
     if (run_bambu_em) {
+        SEURAT_CLUSTERING(BAMBU.out.quant_data, run_clustering)
         ch_rds_files_em = ch_rds_files_collect.map { samples, paths, metas, spatial -> [samples, paths, metas] } // remove spatial metadata from input tuple for EM step
-        BAMBU_EM(ch_rds_files_em, BAMBU.out.quant_data, BAMBU.out.extended_annotations, BAMBU.out.clusters, ch_genome)
+        BAMBU_EM(ch_rds_files_em, BAMBU.out.quant_data, BAMBU.out.extended_annotations, SEURAT_CLUSTERING.out.clusters, ch_genome)
     }
 }

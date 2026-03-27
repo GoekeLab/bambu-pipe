@@ -1,3 +1,2 @@
 subworkflows/prepare_input_visium_hd.nf
 .claude/
-modules/clustering.nf

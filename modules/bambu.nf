@@ -10,13 +10,11 @@ process BAMBU{
 	path(genome)
 	path(bambu_annotation)
     val(ndr)
-    val(run_clustering)
     
-	output: 
+	output:
     path ('*quantData.rds'), emit: quant_data
 	path ('*extended_annotations.rds'), emit: extended_annotations
     path ('*extended_annotations.gtf'), emit: extended_annotations_gtf
-    path ('*_clusters.rds'), emit: clusters
 
 	script:
 	""" 
@@ -47,30 +45,5 @@ process BAMBU{
     discovery = FALSE, quant = FALSE, demultiplexed = TRUE, verbose = FALSE, 
     opt.em = list(degradationBias = FALSE), assignDist = TRUE, sampleData = sampleData)
     saveRDS(se, paste0(runName, "_quantData.rds"))
-
-    # Seurat Clustering (if no clustering provided, automatically cluster)
-	path <- Sys.getenv("PATH") |> strsplit(":")
-    bin_path <- tail(path[[1]], n=1)
-    clusters = NULL
-    if(as.logical("$run_clustering")){
-        clusters = list()
-        cellMixs = list()
-        source(file.path(bin_path,"/utilityFunctions.R"))
-        for(quantData in se){
-            quantData.gene = transcriptToGeneExpression(quantData)
-            for(sample in unique(colData(quantData)\$sampleName)){
-                i = which(colData(quantData)\$sampleName == sample)
-                counts = assays(quantData.gene)\$counts[,i]
-                cellMix = clusterCells(counts, resolution = $params.resolution)
-                x = setNames(names(cellMix@active.ident), cellMix@active.ident)
-                names(x) = paste0(sample,"_",names(x))
-                clusters = c(clusters, splitAsList(unname(x), names(x)))
-                cellMixs = c(cellMixs, cellMix)
-            }
-        }
-        saveRDS(cellMixs, paste0(runName, "_cellMixs.rds"))
-    }
-    
-    saveRDS(clusters, paste0(runName, "_clusters.rds"))
 	"""
 }
