@@ -9,12 +9,19 @@ This pipeline performs context-aware transcript discovery and quantification fro
 The final output includes novel transcripts found in the sample and transcript level count matrices for each barcode/spatial coordinate. 
 
 
-### **Content** 
+### **Content**
 - [Installation](#installation)
-- [General Usage](#General-Usage)
-- [Release History](#Release-History)
-- [Citation](#Citation)
-- [Contributors](#Contributors)
+- [General Usage](#general-usage)
+- [Samplesheet (CSV)](#samplesheet-csv)
+- [Supported 10x Library Chemistries](#supported-10x-library-chemistries)
+- [Parameters](#parameters)
+- [Output](#output)
+- [Spatial Analysis](#spatial-analysis)
+- [Advanced Usage](#advanced-usage)
+- [Additional Information](#additional-information)
+- [Release History](#release-history)
+- [Citation](#citation)
+- [Contributors](#contributors)
 
 
 ### **Installation** 
