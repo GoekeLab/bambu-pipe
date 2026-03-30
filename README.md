@@ -209,6 +209,65 @@ This feature is still under development and will be released in a future update.
 This feature is still under development and will be released in a future update.
 
 
+### **Advanced Usage**
+
+**Stopping the Pipeline Early**
+
+The `--early_stop_stage` parameter allows you to stop the pipeline at an intermediate stage and save the outputs for later use. This is useful when you want to inspect intermediate files or when you plan to re-run downstream steps separately.
+
+- `--early_stop_stage bam`: Stops after genome alignment. BAM files are saved to `output/bam/`.
+- `--early_stop_stage rds`: Stops after Bambu read class construction. Read class `.rds` files are saved to `output/read_class/`.
+
+```bash
+# Stop after read class construction
+nextflow run $PWD/bambu-singlecell-spatial \
+  --input samplesheet.csv \
+  --genome reference.fa \
+  --annotation reference.gtf \
+  --early_stop_stage rds \
+  -profile singularity,hpc
+```
+
+**Restarting from a Specific Stage**
+
+Because the pipeline accepts FASTQ, BAM, or RDS files as input, you can restart from any intermediate stage by providing the corresponding files in your samplesheet. This avoids re-running expensive preprocessing and alignment steps when they have already been completed.
+
+*Example: Incremental sample addition*
+
+A common use case is to process an initial set of samples through to read class `.rds` files, then re-run the full pipeline once additional samples are available. Transcript discovery and quantification in Bambu is performed jointly across all samples, so adding new samples requires re-running only from the `.rds` stage onward.
+
+**Step 1** — Run the first batch of samples from FASTQ to `.rds`:
+```bash
+nextflow run $PWD/bambu-singlecell-spatial \
+  --input samplesheet_batch1.csv \
+  --genome reference.fa \
+  --annotation reference.gtf \
+  --early_stop_stage rds \
+  -profile singularity,hpc
+```
+
+This produces `output/read_class/sample1_readClassFile.rds`, `output/read_class/sample2_readClassFile.rds`, etc.
+
+**Step 2** — When new samples are ready, run all samples together from `.rds` for transcript discovery and quantification. Point the `path` column at the existing `.rds` files for the original samples and at the new FASTQ/BAM files for the new samples:
+
+```csv
+sample,path,chemistry,technology
+sample1,output/read_class/sample1_readClassFile.rds,10x3v3,ONT
+sample2,output/read_class/sample2_readClassFile.rds,10x3v3,ONT
+sample3,path/to/sample3.fastq.gz,10x3v3,ONT
+```
+
+```bash
+nextflow run $PWD/bambu-singlecell-spatial \
+  --input samplesheet_all.csv \
+  --genome reference.fa \
+  --annotation reference.gtf \
+  -profile singularity,hpc
+```
+
+The pipeline will skip preprocessing and alignment for `sample1` and `sample2`, process `sample3` from FASTQ through to `.rds`, and then perform transcript discovery and quantification jointly across all three samples.
+
+
 ### **Additional Information**
 UMI correction is done at the barcode level. The longest read for each unique barcode-UMI combination is kept for analysis.
 
