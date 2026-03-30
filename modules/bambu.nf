@@ -20,7 +20,7 @@ process BAMBU{
 	""" 
 	#!/usr/bin/env Rscript
     #.libPaths("/usr/local/lib/R/site-library")
-    library("bambu")
+    if ("$params.bambu_path" == "null") { library("bambu") } else { library("devtools"); load_all("$params.bambu_path") }
 
 	## Transcript discovery and quantification without EM
     idNames <- strsplit("${sample.join(',')}", ",")[[1]]

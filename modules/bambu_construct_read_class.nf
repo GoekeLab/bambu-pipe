@@ -16,7 +16,7 @@ process BAMBU_CONSTRUCT_READ_CLASS{
     script:
     """
     #!/usr/bin/env Rscript
-    library("bambu")
+    if ("$params.bambu_path" == "null") { library("bambu") } else { library("devtools"); load_all("$params.bambu_path") }
 
 	annotation <- readRDS("$bambu_annotation")
     readClassFile = bambu(reads = "$bam", annotations = annotation, genome = "$genome", 

@@ -19,7 +19,7 @@ process BAMBU_EM{
     """
     #!/usr/bin/env Rscript
     #.libPaths("/usr/local/lib/R/site-library")
-    library("bambu")
+    if ("$params.bambu_path" == "null") { library("bambu") } else { library("devtools"); load_all("$params.bambu_path") }
     
     idNames <- strsplit("${sample.join(',')}", ",")[[1]]
 	runName = if (length(idNames) == 1) idNames[1] else "combined"

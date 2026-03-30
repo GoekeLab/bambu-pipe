@@ -13,7 +13,7 @@ process BAMBU_PREPARE_ANNOTATION{
     script:
     """
     #!/usr/bin/env Rscript
-    library("bambu")
+    if ("$params.bambu_path" == "null") { library("bambu") } else { library("devtools"); load_all("$params.bambu_path") }
 
     annotation <- prepareAnnotations("$annotation")
     saveRDS(annotation, "bambu_annotation.rds")
