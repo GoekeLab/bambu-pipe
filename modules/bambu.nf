@@ -6,7 +6,7 @@ process BAMBU{
     label "medium"
 
 	input:
-    tuple val(sample), path(rds_files), val(meta), path(spatial_metadata_files)
+    tuple val(sample), path(rds_files), val(meta), path(spatial_metadata_files, stageAs: '?/*')
 	path(genome)
 	path(bambu_annotation)
     val(ndr)
