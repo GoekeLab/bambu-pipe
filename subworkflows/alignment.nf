@@ -1,5 +1,5 @@
 process MINIMAP_BUILD_INDEX{
-    container "ghcr.io/ch99l/bambu-pipe-alignment:latest"
+    container "community.wave.seqera.io/library/minimap2_samtools:b09096fc890429ce"
     label "low_cpu"
     label "medium_mem"
     label "short"
@@ -20,7 +20,7 @@ process MINIMAP_BUILD_INDEX{
 }
 
 process PAFTOOLS_GFF2BED {
-    container "ghcr.io/ch99l/bambu-pipe-alignment:latest"
+    container "community.wave.seqera.io/library/minimap2_samtools:b09096fc890429ce"
     label "low_cpu"
     label "low_mem"
     label "short"
@@ -42,7 +42,7 @@ process PAFTOOLS_GFF2BED {
 
 process MINIMAP_ALIGNMENT{
     publishDir "${params.output_dir}/bam", mode: 'copy' 
-    container "ghcr.io/ch99l/bambu-pipe-alignment:latest"
+    container "community.wave.seqera.io/library/minimap2_samtools:b09096fc890429ce"
     label "high_cpu"
     label "high_mem"
     label "long"

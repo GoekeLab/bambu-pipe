@@ -1,5 +1,5 @@
 process PREPROCESS_FASTQ {
-    container "ghcr.io/ch99l/bambu-pipe-preprocess:latest"
+    container "community.wave.seqera.io/library/chopper_cutadapt_flexiplex_pigz:077c3bc67452482c"
     label "medium_cpu"
     label "medium_mem"
     label "long"

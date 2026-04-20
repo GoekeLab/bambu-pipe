@@ -63,7 +63,22 @@ workflow {
         return file
     }
 
-    PREPARE_INPUT_STANDARD(ch_input, ch_barcode_coordinate_config)
+    // split CSV rows, validate no mixing of visium-hd with other samples, then branch by technology
+    ch_input.splitCsv(header:true, sep:',')
+        .toList()
+        .map { rows ->
+            def has_visium_hd = rows.any { it.containsKey('technology') && it.technology == 'visium-hd' }
+            if (has_visium_hd && rows.size() > 1)
+                error "Visium HD samples cannot be mixed with other samples"
+            rows
+        }
+        .flatMap { it }
+        .branch {
+            visium_hd: it.containsKey('technology') && it.technology == 'visium-hd'
+            standard: true
+        }.set { ch_branched }
+
+    PREPARE_INPUT_STANDARD(ch_branched.standard, ch_barcode_coordinate_config)
 
     // input files are split by type (fastq, bam, rds)
     ch_input_fastq = PREPARE_INPUT_STANDARD.out.fastq

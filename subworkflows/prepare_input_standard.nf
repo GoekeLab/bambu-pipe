@@ -52,13 +52,12 @@ process EXTRACT_10X_SPATIAL_COORDINATES {
 
 workflow PREPARE_INPUT_STANDARD {
     take:
-    ch_input
+    ch_rows
     ch_barcode_coordinate_config
 
     main:
-    // read samplesheet CSV into channel of tuples (sample, path, metadata)
-    ch_samples = ch_input.splitCsv(header:true, sep:',')
-    .map { row ->
+    // parse samplesheet rows into channel of tuples (sample, path, metadata)
+    ch_samples = ch_rows.map { row ->
         // validate required columns exist and are non-empty
         ["sample", "path"].each { col ->
             if (!row.containsKey(col))
