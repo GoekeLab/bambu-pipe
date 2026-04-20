@@ -4,13 +4,10 @@ process MINIMAP_BUILD_INDEX{
     label "medium_mem"
     label "short"
 
-    input: 
+    input:
     path(genome)
-    val(fastq_count)
 
-    when: fastq_count > 0 // only build index if there are fastq samples to process
-
-    output: 
+    output:
     path('ref.mmi')
 
     script:
@@ -25,13 +22,10 @@ process PAFTOOLS_GFF2BED {
     label "low_mem"
     label "short"
 
-    input: 
+    input:
     path(gtf)
-    val(fastq_count)
 
-    when: fastq_count > 0 // only convert annotation if there are fastq samples to process
-
-    output: 
+    output:
     path('anno.bed')
 
     script:
@@ -73,18 +67,21 @@ process MINIMAP_ALIGNMENT{
 }
 
 workflow ALIGNMENT {
-    take: 
+    take:
     ch_unaligned_fastq
     ch_genome
     ch_annotation
-    ch_input_fastq_count // fastq count is used to ensure paftools and minimap build index are skipped when there are no fastq samples
 
     main:
+    // ch_gate emits one item if fastq channel is non-empty, else emits nothing. Used to prevent MINIMAP_BUILD_INDEX and PAFTOOLS_GFF2BED 
+    // from running when there are no fastq samples to process
+    ch_gate = ch_unaligned_fastq.first()
+
     // Build minimap2 index based on reference genome
-    MINIMAP_BUILD_INDEX(ch_genome, ch_input_fastq_count)
+    MINIMAP_BUILD_INDEX(ch_genome.combine(ch_gate).map { g, _ -> g })
 
     // Convert gtf/gff annotation to bed format
-    PAFTOOLS_GFF2BED(ch_annotation, ch_input_fastq_count)
+    PAFTOOLS_GFF2BED(ch_annotation.combine(ch_gate).map { a, _ -> a })
 
     // Minimap alignment
     MINIMAP_ALIGNMENT(ch_unaligned_fastq, MINIMAP_BUILD_INDEX.out, PAFTOOLS_GFF2BED.out)

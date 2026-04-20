@@ -88,7 +88,7 @@ workflow {
     // process fastq samples
     ch_preprocess_fastq_in = ch_input_fastq.map { sample, path, meta -> [sample, path, meta, meta.barcode] } // add whitelist path to fastq input tuple
     PREPROCESS_FASTQ(ch_preprocess_fastq_in, ch_flank_seq_config, ch_adapter_seq_config)
-    ALIGNMENT(PREPROCESS_FASTQ.out.fastq, ch_genome, ch_annotation, ch_input_fastq.count()) // fastq count is used to ensure paftools and minimap build index are skipped when there are no fastq samples
+    ALIGNMENT(PREPROCESS_FASTQ.out.fastq, ch_genome, ch_annotation)
 
     // process bam samples
     if (run_read_class_construction) {
