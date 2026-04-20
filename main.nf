@@ -49,9 +49,9 @@ workflow {
 	ch_annotation =  Channel.value(file(params.annotation, checkIfExists: true))
 
     // load config files
-    ch_barcode_coordinate_config = file("${projectDir}/10x_config/barcode_coordinate_config.csv", checkIfExists: true)
-    ch_adapter_seq_config = file("${projectDir}/10x_config/adapter_seq_config.csv", checkIfExists: true)
-    ch_flank_seq_config = file("${projectDir}/10x_config/flank_seq_config.csv", checkIfExists: true)
+    ch_barcode_coordinate_config = file("${projectDir}/assets/10x_config/barcode_coordinate_config.csv", checkIfExists: true)
+    ch_adapter_seq_config = file("${projectDir}/assets/10x_config/adapter_seq_config.csv", checkIfExists: true)
+    ch_flank_seq_config = file("${projectDir}/assets/10x_config/flank_seq_config.csv", checkIfExists: true)
 
     // parsing samplesheet csv file
     ch_input = Channel.fromPath(params.input, checkIfExists: true)
