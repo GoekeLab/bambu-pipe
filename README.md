@@ -307,7 +307,7 @@ UMI correction is done at the barcode level. The longest read for each unique ba
 
 ### **Release History** 
 
-- v0.1-beta: 2023-May-03
+- v0.1-beta: 2025-May-19
 - v0.9: 2026-May-06
 
 
