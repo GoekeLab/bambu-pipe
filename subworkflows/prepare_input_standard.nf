@@ -1,54 +1,5 @@
-process EXTRACT_10X_BARCODES {
-    executor 'local'
-    container "quay.io/nf-core/spaceranger:9c5e7dc93c32448e"
-
-    input:
-    val(chemistry)
-    path(barcode_coordinate_config)
-
-    output:
-    tuple val(chemistry), path("${chemistry}_barcode.txt")
-
-    script:
-    """
-    # extract 10x barcode file path from config csv
-    IFS=',' read -r _ bc_filename _ < <(awk -F',' -v chem=$chemistry '\$1 == chem' $barcode_coordinate_config)
-
-    # extract 10x barcode file from spaceranger container (used for subsequent processes)
-    if [[ \$bc_filename == *.gz ]]; then
-        gunzip -c $params.cellranger_dir/\$bc_filename > ./${chemistry}_barcode.txt
-    else
-        cp $params.cellranger_dir/\$bc_filename ./${chemistry}_barcode.txt
-    fi
-    """
-}
-
-process EXTRACT_10X_SPATIAL_COORDINATES {
-    executor 'local'
-    container "quay.io/nf-core/spaceranger:9c5e7dc93c32448e"
-
-    input:
-    val(chemistry)
-    path(barcode_coordinate_config)
-
-    output:
-    tuple val(chemistry), path("${chemistry}_spatial_coordinates.txt")
-
-    script:
-    """
-    # extract spatial coordinate file path from config csv
-    IFS=',' read -r _ _ sc_filename < <(awk -F',' -v chem=$chemistry '\$1 == chem' $barcode_coordinate_config)
-
-    # extract spatial coordinate file from spaceranger container (used for subsequent processes)
-    # TODO: All visium coordinates file are not gzipped. In the future if there are gzipped files, include decompression)
-    if [[ $chemistry == visium* ]]; then 
-        cp $params.cellranger_dir/\$sc_filename ./${chemistry}_spatial_coordinates.txt
-        sed -i '1ibarcode\tx_coordinate\ty_coordinate' ./${chemistry}_spatial_coordinates.txt # adding header to spatial coordinates file as it is required for bambu
-    else
-        touch ./${chemistry}_spatial_coordinates.txt # create empty file for non-visium chemistries
-    fi
-    """
-}
+include { EXTRACT_10X_BARCODES            } from '../modules/prepare_input_standard/extract_barcodes.nf'
+include { EXTRACT_10X_SPATIAL_COORDINATES } from '../modules/prepare_input_standard/extract_spatial_coordinates.nf'
 
 workflow PREPARE_INPUT_STANDARD {
     take:
@@ -91,8 +42,8 @@ workflow PREPARE_INPUT_STANDARD {
 
     // update metadata with barcode and spatial coordinate paths
     ch_updated_samples = ch_samples.map { sample, path, meta -> [meta.chemistry, sample, path, meta] }
-        .combine(EXTRACT_10X_BARCODES.out, by: 0)
-        .combine(EXTRACT_10X_SPATIAL_COORDINATES.out, by: 0)
+        .combine(EXTRACT_10X_BARCODES.out.barcodes, by: 0)
+        .combine(EXTRACT_10X_SPATIAL_COORDINATES.out.spatial_coordinates, by: 0)
         .map { chem, sample, path, meta, bc, sc ->
             def updated_meta = meta + [
                 barcode: bc, 
@@ -111,4 +62,5 @@ workflow PREPARE_INPUT_STANDARD {
     fastq = ch_fastq
     bam = ch_bam
     rds = ch_rds
+    versions = EXTRACT_10X_BARCODES.out.versions.first()
 }

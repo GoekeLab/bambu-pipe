@@ -1,11 +1,12 @@
 process PREPROCESS_FASTQ {
-    container "community.wave.seqera.io/library/chopper_cutadapt_flexiplex_pigz:077c3bc67452482c"
+    label "preprocess"
     label "medium_cpu"
-    label "medium_mem"
+    label "high_mem"
     label "long"
 
     publishDir "$params.output_dir/intermediate_fastq",
         mode: 'symlink',
+        pattern: '*.fastq.gz',
         enabled: params.save_intermediates
     
     input:
@@ -16,9 +17,11 @@ process PREPROCESS_FASTQ {
     output:
     tuple val(sample), path("${sample}_preprocessed_reads.fastq.gz"), val(meta), emit: fastq
     path("*_intermediate_*"), optional: true
+    path "versions.yml", emit: versions
 
     script:
     """
+    set -euo pipefail
     #=======================================================================================================
     # Helper functions (All functions read from stdin and write to stdout)
     #=======================================================================================================
@@ -102,8 +105,8 @@ process PREPROCESS_FASTQ {
     flank_seq="-x \$left_flank -b \$barcode -u \$umi -x \$right_flank"
 
     # Flexiplex filter (barcode filtering)
-	flexiplex -p $task.cpus \$flank_seq -f 0 ${sample}_chopper_out.fastq
-	flexiplex-filter -w $whitelist --outfile my_filtered_barcode_list.txt flexiplex_barcodes_counts.txt
+    flexiplex -p $task.cpus \$flank_seq -f 0 ${sample}_chopper_out.fastq
+    flexiplex-filter -w $whitelist --outfile my_filtered_barcode_list.txt flexiplex_barcodes_counts.txt
 
     # Chain commands: Flexiplex demultiplexing -> (Optional) Save intermediate file after flexiplex -> Cutadapt trimming of reverse primer -> \
     # Cutadapt re-search for all primer and TSO sequences to remove non-standard reads -> Reverse complementation of reads for 3' and visium chemistry -> Compression with pigz
@@ -116,5 +119,12 @@ process PREPROCESS_FASTQ {
     pigz -p $task.cpus -c > ${sample}_preprocessed_reads.fastq.gz
 
     rm ${sample}_chopper_out.fastq
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        chopper: \$(chopper --version 2>&1 | head -1)
+        cutadapt: \$(cutadapt --version 2>&1 | head -1)
+        flexiplex: \$(flexiplex --version 2>&1 | head -1)
+    END_VERSIONS
     """
 }

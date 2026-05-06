@@ -5,38 +5,14 @@ nextflow.enable.dsl=2
 include { PREPARE_INPUT_STANDARD } from './subworkflows/prepare_input_standard.nf'
 include { PREPROCESS_FASTQ } from './modules/preprocess_fastq.nf'
 include { ALIGNMENT } from './subworkflows/alignment.nf'
-include { BAMBU_CONSTRUCT_READ_CLASS } from './modules/bambu_construct_read_class.nf'
-include { BAMBU_PREPARE_ANNOTATION } from './modules/bambu_prepare_annotation.nf'
-include { BAMBU } from './modules/bambu.nf'
-include { SEURAT_CLUSTERING } from './modules/seurat_clustering.nf'
-include { BAMBU_EM } from './modules/bambu_EM.nf'
-
-def validateParams(params) {
-    // Required inputs
-    if (!params.input)
-        error "params.input is not set — please provide a path to a CSV samplesheet"
-    if (!params.genome)
-        error "params.genome is not set — please provide a path to the reference genome FASTA file"
-    if (!params.annotation)
-        error "params.annotation is not set — please provide a path to the reference annotation GTF file"
-
-    // Enum checks
-    if (!params.valid_quantification_modes.contains(params.quantification_mode))
-        error "Invalid params.quantification_mode '${params.quantification_mode}' — must be one of: ${params.valid_quantification_modes.join(', ')}"
-
-    if (!params.valid_early_stop_stages.contains(params.early_stop_stage))
-        error "Invalid params.early_stop_stage '${params.early_stop_stage}' — must be one of: rds, bam, or null"
-
-    // Numeric range checks
-    if (params.resolution <= 0)
-        error "Invalid params.resolution '${params.resolution}' — must be a positive number"
-
-    if (params.ndr != null && (params.ndr < 0 || params.ndr > 1))
-        error "Invalid params.ndr '${params.ndr}' — must be a float between 0 and 1"
-}
+include { BAMBU_CONSTRUCT_READ_CLASS } from './modules/bambu/construct_read_class.nf'
+include { BAMBU_PREPARE_ANNOTATION } from './modules/bambu/prepare_annotation.nf'
+include { BAMBU_TRANSCRIPT_DISCOVERY } from './modules/bambu/transcript_discovery.nf'
+include { SEURAT_CLUSTERING } from './modules/bambu/seurat_clustering.nf'
+include { BAMBU_EM } from './modules/bambu/EM_quant.nf'
 
 workflow {
-    validateParams(params)
+    Validation.validateParams(params, workflow)
 
     def ndr = params.ndr ?: 'NULL'
     def run_read_class_construction = params.early_stop_stage != 'bam'
@@ -63,22 +39,27 @@ workflow {
         return file
     }
 
-    // split CSV rows, validate no mixing of visium-hd with other samples, then branch by technology
-    ch_input.splitCsv(header:true, sep:',')
-        .toList()
-        .map { rows ->
-            def has_visium_hd = rows.any { it.containsKey('technology') && it.technology == 'visium-hd' }
-            if (has_visium_hd && rows.size() > 1)
-                error "Visium HD samples cannot be mixed with other samples"
-            rows
-        }
-        .flatMap { it }
-        .branch {
-            visium_hd: it.containsKey('technology') && it.technology == 'visium-hd'
-            standard: true
-        }.set { ch_branched }
+    // TODO: Visium HD routing — restore when Visium HD support is added
+    // ch_input.splitCsv(header:true, sep:',')
+    //     .toList()
+    //     .map { rows ->
+    //         def has_visium_hd = rows.any { it.containsKey('technology') && it.technology == 'visium-hd' }
+    //         if (has_visium_hd && rows.size() > 1)
+    //             error "Visium HD samples cannot be mixed with other samples"
+    //         rows
+    //     }
+    //     .flatMap { it }
+    //     .branch {
+    //         visium_hd: it.containsKey('technology') && it.technology == 'visium-hd'
+    //         standard: true
+    //     }.set { ch_branched }
+    // PREPARE_INPUT_STANDARD(ch_branched.standard, ch_barcode_coordinate_config)
 
-    PREPARE_INPUT_STANDARD(ch_branched.standard, ch_barcode_coordinate_config)
+    ch_input.splitCsv(header:true, sep:',')
+        .set { ch_standard }
+
+    PREPARE_INPUT_STANDARD(ch_standard, ch_barcode_coordinate_config)
+    ch_versions = PREPARE_INPUT_STANDARD.out.versions
 
     // input files are split by type (fastq, bam, rds)
     ch_input_fastq = PREPARE_INPUT_STANDARD.out.fastq
@@ -88,29 +69,34 @@ workflow {
     // process fastq samples
     ch_preprocess_fastq_in = ch_input_fastq.map { sample, path, meta -> [sample, path, meta, meta.barcode] } // add whitelist path to fastq input tuple
     PREPROCESS_FASTQ(ch_preprocess_fastq_in, ch_flank_seq_config, ch_adapter_seq_config)
+    ch_versions = ch_versions.mix(PREPROCESS_FASTQ.out.versions.first())
     ALIGNMENT(PREPROCESS_FASTQ.out.fastq, ch_genome, ch_annotation)
+    ch_versions = ch_versions.mix(ALIGNMENT.out.versions)
 
     // process bam samples
     if (run_read_class_construction) {
         ch_bam_files = ALIGNMENT.out.bam.concat(ch_input_bam) // concatenate aligned bam files with input bam files
         BAMBU_PREPARE_ANNOTATION(ch_annotation) // prepare annotation once for all samples
-        BAMBU_CONSTRUCT_READ_CLASS(ch_bam_files, ch_genome, BAMBU_PREPARE_ANNOTATION.out)
+        ch_versions = ch_versions.mix(BAMBU_PREPARE_ANNOTATION.out.versions)
+        BAMBU_CONSTRUCT_READ_CLASS(ch_bam_files, ch_genome, BAMBU_PREPARE_ANNOTATION.out.annotation)
     }
 
     // process rds samples
     if (run_bambu_discovery) {
         ch_rds_files = BAMBU_CONSTRUCT_READ_CLASS.out.rds.concat(ch_input_rds) // concatenate constructed read class rds files with input rds files
-        // reshape and collect rds file channel 
+        // reshape and collect rds file channel
         ch_rds_files_collect = ch_rds_files
         .map { sample, path, meta -> [sample, path, meta, meta.spatial_metadata] }
         .collect(flat:false) 
         .map { it.transpose() } 
-        BAMBU(ch_rds_files_collect, ch_genome, BAMBU_PREPARE_ANNOTATION.out, ndr)
+        BAMBU_TRANSCRIPT_DISCOVERY(ch_rds_files_collect, ch_genome, BAMBU_PREPARE_ANNOTATION.out.annotation, ndr)
     }
 
     if (run_bambu_em) {
-        SEURAT_CLUSTERING(BAMBU.out.quant_data, run_clustering)
-        ch_rds_files_em = ch_rds_files_collect.map { samples, paths, metas, spatial -> [samples, paths, metas] } // remove spatial metadata from input tuple for EM step
-        BAMBU_EM(ch_rds_files_em, BAMBU.out.quant_data, BAMBU.out.extended_annotations, SEURAT_CLUSTERING.out.clusters, ch_genome)
+        SEURAT_CLUSTERING(BAMBU_TRANSCRIPT_DISCOVERY.out.gene_counts, BAMBU_TRANSCRIPT_DISCOVERY.out.sample_names, run_clustering)
+        ch_versions = ch_versions.mix(SEURAT_CLUSTERING.out.versions)
+        BAMBU_EM(BAMBU_TRANSCRIPT_DISCOVERY.out.quant_data, BAMBU_TRANSCRIPT_DISCOVERY.out.extended_annotations, SEURAT_CLUSTERING.out.clusters, ch_genome)
     }
+
+    ch_versions.collectFile(name: 'software_versions.yml', storeDir: "${params.output_dir}")
 }
