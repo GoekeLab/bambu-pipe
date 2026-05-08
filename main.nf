@@ -8,7 +8,7 @@ include { ALIGNMENT } from './subworkflows/alignment.nf'
 include { BAMBU_CONSTRUCT_READ_CLASS } from './modules/bambu/construct_read_class.nf'
 include { BAMBU_PREPARE_ANNOTATION } from './modules/bambu/prepare_annotation.nf'
 include { BAMBU_TRANSCRIPT_DISCOVERY } from './modules/bambu/transcript_discovery.nf'
-include { SEURAT_CLUSTERING } from './modules/bambu/seurat_clustering.nf'
+include { SEURAT_CLUSTERING } from './modules/seurat_clustering.nf'
 include { BAMBU_EM } from './modules/bambu/EM_quant.nf'
 
 workflow {
@@ -39,24 +39,8 @@ workflow {
         return file
     }
 
-    // TODO: Visium HD routing — restore when Visium HD support is added
-    // ch_input.splitCsv(header:true, sep:',')
-    //     .toList()
-    //     .map { rows ->
-    //         def has_visium_hd = rows.any { it.containsKey('technology') && it.technology == 'visium-hd' }
-    //         if (has_visium_hd && rows.size() > 1)
-    //             error "Visium HD samples cannot be mixed with other samples"
-    //         rows
-    //     }
-    //     .flatMap { it }
-    //     .branch {
-    //         visium_hd: it.containsKey('technology') && it.technology == 'visium-hd'
-    //         standard: true
-    //     }.set { ch_branched }
-    // PREPARE_INPUT_STANDARD(ch_branched.standard, ch_barcode_coordinate_config)
-
-    ch_input.splitCsv(header:true, sep:',')
-        .set { ch_standard }
+    // TODO: Add Visium-HD and non-standard routing
+    ch_standard = ch_input.splitCsv(header:true, sep:',')
 
     PREPARE_INPUT_STANDARD(ch_standard, ch_barcode_coordinate_config)
     ch_versions = PREPARE_INPUT_STANDARD.out.versions
@@ -93,9 +77,14 @@ workflow {
     }
 
     if (run_bambu_em) {
-        SEURAT_CLUSTERING(BAMBU_TRANSCRIPT_DISCOVERY.out.gene_counts, BAMBU_TRANSCRIPT_DISCOVERY.out.sample_names, run_clustering)
-        ch_versions = ch_versions.mix(SEURAT_CLUSTERING.out.versions)
-        BAMBU_EM(BAMBU_TRANSCRIPT_DISCOVERY.out.quant_data, BAMBU_TRANSCRIPT_DISCOVERY.out.extended_annotations, SEURAT_CLUSTERING.out.clusters, ch_genome)
+        if (run_clustering) {
+            SEURAT_CLUSTERING(BAMBU_TRANSCRIPT_DISCOVERY.out.gene_counts, BAMBU_TRANSCRIPT_DISCOVERY.out.sample_names)
+            ch_versions = ch_versions.mix(SEURAT_CLUSTERING.out.versions)
+            ch_clusters = SEURAT_CLUSTERING.out.clusters.map { f -> [true, f] }
+        } else {
+            ch_clusters = Channel.value([false, []])
+        }
+        BAMBU_EM(BAMBU_TRANSCRIPT_DISCOVERY.out.quant_data, BAMBU_TRANSCRIPT_DISCOVERY.out.extended_annotations, ch_clusters, ch_genome)
     }
 
     ch_versions.collectFile(name: 'software_versions.yml', storeDir: "${params.output_dir}")

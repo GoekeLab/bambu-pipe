@@ -1,16 +1,6 @@
-# **Context-Aware Transcript Quantification from Long Read Single-Cell and Spatial Transcriptomics data**
-This pipeline performs context-aware transcript discovery and quantification from long read single-cell and spatial transcriptomics data. The workflow consists of: 
-1. (Optional) Quality score filtering with [chopper](https://github.com/wdecoster/chopper)
-2. Barcode/UMI identification and demultiplexing with [flexiplex](https://davidsongroup.github.io/flexiplex/)
-3. Primer removal with [cutadapt](https://cutadapt.readthedocs.io/en/stable/)
-4. Genome alignment with [minimap2](https://lh3.github.io/minimap2/minimap2.html)
-5. Transcript discovery with [Bambu](https://github.com/GoekeLab/bambu/tree/BambuDev)
-6. (Optional) Pseudo-bulk clustering with [Seurat](https://github.com/satijalab/seurat)
-7. Transcript quantification with Bambu
-
-The final output includes novel transcripts found in the sample and transcript level count matrices for each barcode/spatial coordinate. 
-
+# **Context-Aware Transcript Quantification from Long-Read Single-Cell and Spatial Transcriptomics Data**
 ### **Content**
+- [Overview](#overview)
 - [Installation](#installation)
 - [General Usage](#general-usage)
 - [Parameters](#parameters)
@@ -23,6 +13,25 @@ The final output includes novel transcripts found in the sample and transcript l
 - [Contributors](#contributors)
 
 
+### **Overview**
+This pipeline performs context-aware transcript discovery and quantification from long-read single-cell and spatial transcriptomics data. The workflow is divided into three stages:
+
+**Preprocessing**
+1. (Optional) Quality score filtering with [Chopper](https://github.com/wdecoster/chopper)
+2. Barcode/UMI identification and demultiplexing with [Flexiplex](https://davidsongroup.github.io/flexiplex/)
+3. Primer removal with [Cutadapt](https://cutadapt.readthedocs.io/en/stable/)
+
+**Alignment**
+
+4. Genome alignment with [Minimap2](https://lh3.github.io/minimap2/minimap2.html)
+
+**Transcript Discovery and Quantification**
+
+5. Read class construction and transcript discovery with [Bambu](https://github.com/GoekeLab/bambu/tree/BambuDev) (performed jointly across all samples)
+6. (Optional) Transcript quantification with Bambu using one of two modes:
+   - Cluster-level EM: Gene expression-based cell clustering with [Seurat](https://github.com/satijalab/seurat) across all samples, followed by per-sample cluster-level transcript quantification
+   - Single-cell EM: Per-cell transcript quantification 
+
 ### **Installation** 
 Install the following dependencies before running the pipeline:
 - [Nextflow](https://www.nextflow.io/docs/latest/install.html) 
@@ -31,7 +40,7 @@ Install the following dependencies before running the pipeline:
 The latest version for each dependency is recommended. 
 
 ### **General Usage** 
-To run the pipeline, you must provide a samplesheet, reference genome, and reference annotation file as input. The pipeline performs transcript discovery and quantification on either a single sample or on multiple samples based on the number of samples specified in the samplesheet. Refer to the [Parameters](#parameters) and Samplesheet (CSV) sections below for more details. 
+To run the pipeline, you must provide a samplesheet, reference genome, and reference annotation file as input. The pipeline performs transcript discovery and quantification on either a single sample or multiple samples based on the number of samples specified in the samplesheet. Refer to the [Parameters](#parameters) and Samplesheet (CSV) sections below for more details. 
 
 **Running the pipeline**
 
@@ -95,8 +104,8 @@ The following single cell and spatial library chemistries are supported. Please 
 - `10x5v3` (GEM-X Single Cell 5' v3)
 - `visium-v1` (Visium Spatial Gene Expression Slide 6.5 mm; serial prefix V1)
 - `visium-v2` (Visium Spatial Gene Expression Slide 6.5 mm; serial prefix V2)
-- `visium-v3` (Visium Spatial Gene Expression Slide 6.5mm; serial prefix V3)
-- `visium-v4` (Visium CytAssist Spatial Gene Expression Slide 6.5mm; serial prefix V4)
+- `visium-v3` (Visium Spatial Gene Expression Slide 6.5 mm; serial prefix V3)
+- `visium-v4` (Visium CytAssist Spatial Gene Expression Slide 6.5 mm; serial prefix V4)
 - `visium-v5` (Visium CytAssist Spatial Gene Expression Slide 11mm; serial prefix V5)
 
 **Pipeline Configuration**
@@ -133,9 +142,10 @@ To configure the executor and container, pass profile types via the `-profile` a
 - `--quantification_mode` [string, default: "EM_clusters"]: Quantification mode for transcript counts. Available options are:
   - "no_quant": Transcript quantification is not performed
   - "EM": Performs transcript quantification for each cell/spatial coordinate
-  - "EM_clusters": Performs pseudo-bulk clustering using [Seurat](https://satijalab.org/seurat/) followed by transcript quantification at the cluster level
+  - "EM_clusters": Performs gene expression-based cell clustering using [Seurat](https://satijalab.org/seurat/), followed by transcript quantification at the cluster level
 - `--resolution` [float, default: 0.8]: Seurat clustering resolution
 
+> **Warning:** We currently recommend processing one sample at a time if `--quantification_mode` is set to `EM_clusters`. Mixing multiple samples is not advised, as batch effect correction across samples during clustering has not yet been implemented and will be available in a future release.
 
 ### **Output**
 All outputs from the pipeline are written to the directory specified by the `--output_dir` parameter. The pipeline produces per-sample alignment files, per-sample read class files used by Bambu, and the combined transcript discovery and quantification results. The examples below show the output directory structure for both single and multi-sample runs:
@@ -151,7 +161,16 @@ output/
 │   └── sample1_read_class.rds
 │
 ├── extended_annotations.gtf
-├── se.rds
+├── se_unique_counts.rds
+├── se_gene_counts.rds
+│
+│   # single-cell EM:
+├── se_transcript_counts_singlecell.rds
+│
+│   # clustered EM:
+├── se_transcript_counts_clusters.rds
+├── se_gene_counts_clusters.rds
+│
 └── software_versions.yml
 ```
 
@@ -169,11 +188,18 @@ output/
 │   └── sample2_read_class.rds
 │
 ├── extended_annotations.gtf
-├── se.rds
+├── se_unique_counts.rds
+├── se_gene_counts.rds
+│
+│   # single-cell EM:
+├── se_transcript_counts_singlecell.rds
+│
+│   # clustered EM:
+├── se_transcript_counts_clusters.rds
+├── se_gene_counts_clusters.rds
+│
 └── software_versions.yml
-```
-
-Note: For single sample runs, the `extended_annotations.gtf` and `se.rds` are prefixed with the `sample_name`. For multi-sample runs, the `combined` prefix is used instead. 
+``` 
 
 **Description of the Output Files**
 | File | Description 
@@ -182,7 +208,11 @@ Note: For single sample runs, the `extended_annotations.gtf` and `se.rds` are pr
 | <sample_name>_demultiplexed.bam.bai | BAM index for the corresponding BAM file
 | <sample_name>_read_class.rds |  An intermediate metadata file used by Bambu that contains the constructed read classes. This file can be used as input in subsequent runs to bypass the initial preprocessing and alignment steps. 
 | extended_annotations.gtf | A `.gtf` file containing the novel transcripts discovered by Bambu as well as the reference annotations provided by the user.
-| se.rds | A [RangedSummarizedExperiment](https://www.rdocumentation.org/packages/SummarizedExperiment/versions/1.2.3/topics/RangedSummarizedExperiment-class) object containing count matrices (`.mtx`) from transcript quantification by Bambu. Depending on the `quantification_mode`, the matrices are provided at either pseudobulk or single-cell level. The rows of the matrices represent transcript names, while the columns follow the `sampleName_cellBarcode` or `sampleName_clusterId` naming convention.
+| se_unique_counts.rds | A [RangedSummarizedExperiment](https://www.rdocumentation.org/packages/SummarizedExperiment/versions/1.2.3/topics/RangedSummarizedExperiment-class) object containing transcript-level unique counts at single-cell resolution, produced prior to EM quantification.
+| se_gene_counts.rds | A RangedSummarizedExperiment object containing gene-level counts at single-cell resolution
+| se_transcript_counts_singlecell.rds | A RangedSummarizedExperiment object containing per-cell transcript counts after EM quantification. Only produced when EM is run without cluster assignments.
+| se_transcript_counts_clusters.rds | A RangedSummarizedExperiment object containing cluster-level transcript counts after EM quantification. Columns follow the `sampleName_clusterId` naming convention. Only produced when EM is run with clustering.
+| se_gene_counts_clusters.rds | A RangedSummarizedExperiment object containing cluster-level gene counts. Only produced when EM is run with clustering.
 | software_versions.yml | A YAML file listing the versions of all software tools used during the pipeline run.
 
 **Count Matrices**
@@ -192,6 +222,8 @@ The [RangedSummarizedExperiment](https://www.rdocumentation.org/packages/Summari
 - `CPM`: sequencing depth normalised estimates
 - `fullLengthCounts`: estimates of read counts mapped as full length reads for each transcript
 - `uniqueCounts`: counts of reads that are uniquely mapped to each transcript 
+
+Note: In `se_unique_counts.rds`, unique counts are stored under the `counts` assay, not `uniqueCounts`.
 
 
 ### **Spatial Analysis**
@@ -221,7 +253,7 @@ This feature is still under development and will be released in a future update.
 
 **Minimal End-to-End Smoke Test**
 
-Example data and pre-configured profiles are provided in `examples/` to run the pipeline end-to-end automatically without preparing your own data. Combine the profile `test_base` with one of the profiles below and a container profile (`singularity` or `docker`).
+Example data and pre-configured profiles are provided in `examples/` to run the pipeline end-to-end automatically without preparing your own data. The commands below must be run from the project's root directory. Combine the profile `test_base` with one of the profiles below and a container profile (`singularity` or `docker`).
 
 | Profile | Description |
 |---|---|
@@ -269,7 +301,7 @@ Because the pipeline accepts FASTQ, BAM, or RDS files as input, you can restart 
 
 *Example: Incremental sample addition*
 
-A common use case is to process an initial set of samples through to read class `.rds` files, then re-run the full pipeline once additional samples are available. Transcript discovery and quantification in Bambu is performed jointly across all samples, so adding new samples requires re-running only from the `.rds` stage onward.
+A common use case is to process an initial set of samples through to read class `.rds` files, then re-run the pipeline once additional samples are available. 
 
 *Step 1* — Run the first batch of samples from FASTQ to `.rds`:
 ```bash
@@ -283,7 +315,7 @@ nextflow run main.nf \
 
 This produces `output/read_class/sample1_read_class.rds`, `output/read_class/sample2_read_class.rds`, etc.
 
-*Step 2* — When new samples are ready, run all samples together from `.rds` for transcript discovery and quantification. Point the `path` column at the existing `.rds` files for the original samples and at the new FASTQ/BAM files for the new samples:
+*Step 2* — When new samples are ready, run all samples together. Point the `path` column at the existing `.rds` files for the original samples and at the new FASTQ/BAM files for the new samples:
 
 ```csv
 sample,path,chemistry,technology
@@ -302,18 +334,25 @@ nextflow run main.nf \
 
 The pipeline will skip preprocessing and alignment for `sample1` and `sample2`, process `sample3` from FASTQ through to `.rds`, and then perform transcript discovery and quantification jointly across all three samples.
 
+**Manual Clustering (Under Development)**
+
+Currently, cell clustering is performed automatically as part of the pipeline. In a future release, a tutorial will be provided that allows users to stop the pipeline after transcript discovery, perform their own custom clustering, and then resume the pipeline to run Bambu transcript quantification using their cluster assignments.
+
 ### **Additional Information**
 UMI correction is done at the barcode level. The longest read for each unique barcode-UMI combination is kept for analysis.
 
 ### **Release History** 
 
 - v0.1-beta: 2025-May-19
-- v0.9: 2026-May-06
+- v0.9-beta: 2026-May-11
 
 
 ### **Citation**
-#### Bambu
+If you use this pipeline, please cite our paper:
+
 Sim, A., Ling, M. H., Chen, Y., Lu, H., See, Y. X., Perrin, A., Leng Agnes, O. B., Cao, E. Y., Chia, B., Liu, J., Wüstefeld, T., Shin, J. W., & Göke, J. (2025). Isoform-level discovery, quantification and fusion analysis from single-cell and spatial long-read RNA-seq data with Bambu-Clump. https://doi.org/10.1101/2024.12.30.630828
+
+The following are citations for the other tools used in this pipeline:
 
 #### Chopper
 De Coster Wouter, & Rademakers, R. (2023). NanoPack2: Population scale evaluation of long-read sequencing data. Bioinformatics, 39(5). https://doi.org/10.1093/bioinformatics/btad311

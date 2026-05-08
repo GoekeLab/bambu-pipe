@@ -4,7 +4,7 @@ This file contains all notable changes to Bambu-Pipe.
 
 ---
 
-## [1.0.0] - 2026-MM-DD
+## [v0.9-beta] - 2026-05-11
 
 ### Added
 - Quality score filtering with Chopper
@@ -39,7 +39,7 @@ This file contains all notable changes to Bambu-Pipe.
 
 ---
 
-## [BETA] - 2023-05-03
+## [v0.1-beta] - 2025-05-19
 
 ### Added
 - Initial pipeline release

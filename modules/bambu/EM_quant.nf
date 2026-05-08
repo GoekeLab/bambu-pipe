@@ -8,11 +8,12 @@ process BAMBU_EM{
     input:
     path(quant_data)
     path(extended_annotation)
-    path(clusters)
+    tuple val(has_clusters), path(clusters)
     path(genome)
 
     output:
-    path ('se.rds')
+    path ('se_transcript_counts_*.rds')
+    path ('se_gene_counts_clusters.rds'), optional: true
 
     script:
     """
@@ -21,7 +22,7 @@ process BAMBU_EM{
     
     extendedAnno <- readRDS("$extended_annotation")
     quantData = readRDS("$quant_data")
-    clusters = readRDS("$clusters")
+    clusters = if ("$has_clusters" == "true") readRDS("$clusters") else NULL
     degBias <- !is.null(clusters) 
 
     se = bambu.singlecell(
@@ -37,6 +38,13 @@ process BAMBU_EM{
         opt.em = list(degradationBias = degBias), 
         clusters = clusters
     )
-    saveRDS(se, "se.rds")
+
+    # Save transcript counts; for clustered EM, also save gene counts
+    if (is.null(clusters)) {
+        saveRDS(se, "se_transcript_counts_singlecell.rds")
+    } else {
+        saveRDS(se, "se_transcript_counts_clusters.rds")
+        saveRDS(transcriptToGeneExpression(se), "se_gene_counts_clusters.rds")
+    }
     """
 }

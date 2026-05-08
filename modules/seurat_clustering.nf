@@ -8,7 +8,6 @@ process SEURAT_CLUSTERING {
     input:
     path(gene_counts)
     path(sample_names)
-    val(run_clustering)
 
     output:
     path ('clusters.rds'), emit: clusters
@@ -18,8 +17,8 @@ process SEURAT_CLUSTERING {
     script:
     """
     #!/usr/bin/env Rscript
-    if ("$params.bambu_path" == "null") { library("bambu") } else { library("devtools"); load_all("$params.bambu_path") }
     library(Seurat)
+    library(IRanges)
 
     # Seurat Clustering 
     clusterCells <- function(counts, resolution, dim = 15){
@@ -37,32 +36,29 @@ process SEURAT_CLUSTERING {
         return(cellMix)
     }
 
-    clustersTemp <- NULL
-    if ("$run_clustering" == "true") {
-        # Joint clustering across all samples
-        counts <- readRDS("$gene_counts")
-        cellMix <- clusterCells(counts, $params.resolution)
-        saveRDS(cellMix, "cell_mix.rds")
+    # Joint clustering across all samples
+    counts <- readRDS("$gene_counts")
+    cellMix <- clusterCells(counts, $params.resolution)
+    saveRDS(cellMix, "cell_mix.rds")
 
-        # Extract barcodes and clusters from Seurat object
-        allBarcodes   <- names(cellMix@active.ident)
-        clusterLabels <- paste0("cluster", as.character(cellMix@active.ident))
+    # Extract barcodes and clusters from Seurat object
+    allBarcodes   <- names(cellMix@active.ident)
+    clusterLabels <- paste0("cluster", as.character(cellMix@active.ident))
 
-        # Extract sample name for each barcode by stripping the trailing underscore
-        sampleNames <- readRDS("$sample_names")
-        sampleLabels <- sub("_[^_]+\$", "", allBarcodes)
+    # Extract sample name for each barcode by stripping the trailing underscore
+    sampleNames <- readRDS("$sample_names")
+    sampleLabels <- sub("_[^_]+\$", "", allBarcodes)
 
-        # Build an ordered list of CompressedCharacterLists, one per sample, in quantData order
-        # Each CCL maps cluster labels to the barcodes belonging to that cluster
-        clustersTemp <- setNames(lapply(sampleNames, function(s) {
-            idx           <- which(sampleLabels == s)       # indices of barcodes belonging to sample s
-            sampleBarcode <- allBarcodes[idx]               # barcodes for this sample in {sampleName}_{barcode} format
-            clusterLabel  <- paste0(s, "_", clusterLabels[idx]) # cluster label per barcode: {sampleName}_cluster{N}
-            splitAsList(sampleBarcode, clusterLabel)        # split barcodes into a CompressedCharacterList
-        }), sampleNames)
-    }
+    # Build an ordered list of CompressedCharacterLists, one per sample, in quantData order
+    # Each CCL maps cluster labels to the barcodes belonging to that cluster
+    clusters <- setNames(lapply(sampleNames, function(s) {
+        idx           <- which(sampleLabels == s)       # indices of barcodes belonging to sample s
+        sampleBarcode <- allBarcodes[idx]               # barcodes for this sample in {sampleName}_{barcode} format
+        clusterLabel  <- paste0(s, "_", clusterLabels[idx]) # cluster label per barcode: {sampleName}_cluster{N}
+        splitAsList(sampleBarcode, clusterLabel)        # split barcodes into a CompressedCharacterList
+    }), sampleNames)
 
-    saveRDS(clustersTemp, "clusters.rds")
+    saveRDS(clusters, "clusters.rds")
     writeLines(c('"${task.process}":', paste0('    seurat: ', as.character(packageVersion("Seurat")))), "versions.yml")
     """
 }

@@ -1,4 +1,3 @@
-subworkflows/prepare_input_visium_hd.nf
 .claude/
 .smoke_test/
 .nextflow/

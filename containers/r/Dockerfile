@@ -1,10 +1,24 @@
-FROM rocker/r-base:4.4.1
+FROM mambaorg/micromamba:1.5.10-noble
 
-# install system dependencies
-RUN apt-get update && apt-get install -y \
-	  libcurl4-openssl-dev \
-	  procps && rm -rf /var/lib/apt/lists/*
+USER root
+RUN apt-get update && apt-get install -y libcurl4-openssl-dev procps git \
+    && rm -rf /var/lib/apt/lists/*
 
-# install Seurat Object (v5.3.0), Seurat (v5.4.0), and Bambu
-RUN R -e "install.packages(c('pak', 'devtools', 'BiocManager'), repos='https://cloud.r-project.org')"
-RUN R -e "pak::pkg_install(c('SeuratObject@5.3.0', 'Seurat@5.4.0', 'GoekeLab/bambu@devel_pre_v4'))"
+ARG MAMBA_DOCKERFILE_ACTIVATE=1
+
+# Install bioconductor version of bambu for its dependencies
+RUN micromamba install -y -n base -c conda-forge -c bioconda \
+    r-base=4.5.3 \
+    r-devtools=2.5.2 \
+    r-biocmanager=1.30.27 \
+    bioconductor-bambu=3.12.1 \
+    r-seurat=5.4.0 \
+    gxx=15.2.0 \
+    && micromamba clean --all --yes
+
+# Clone bambu single cell feature branch 
+RUN git clone --branch exportNewFunctions \
+    https://github.com/GoekeLab/bambu.git /opt/bambu \
+    && R -e 'devtools::install("/opt/bambu")'
+
+ENV PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
