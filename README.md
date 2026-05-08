@@ -145,7 +145,7 @@ To configure the executor and container, pass profile types via the `-profile` a
   - "EM_clusters": Performs gene expression-based cell clustering using [Seurat](https://satijalab.org/seurat/), followed by transcript quantification at the cluster level
 - `--resolution` [float, default: 0.8]: Seurat clustering resolution
 
-> **Warning:** We currently recommend processing one sample at a time if `--quantification_mode` is set to `EM_clusters`. Mixing multiple samples is not advised, as batch effect correction across samples during clustering has not yet been implemented and will be available in a future release.
+> **Warning:** We currently recommend processing one sample at a time if `--quantification_mode` is set to `EM_clusters`, as batch effect correction across samples during clustering has not yet been implemented and will be available in a future release.
 
 ### **Output**
 All outputs from the pipeline are written to the directory specified by the `--output_dir` parameter. The pipeline produces per-sample alignment files, per-sample read class files used by Bambu, and the combined transcript discovery and quantification results. The examples below show the output directory structure for both single and multi-sample runs:
