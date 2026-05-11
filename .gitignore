@@ -1,0 +1,5 @@
+.claude/
+.smoke_test/
+.nextflow/
+.nextflow.log*
+work/
