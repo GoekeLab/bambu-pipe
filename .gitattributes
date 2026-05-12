@@ -1,0 +1,7 @@
+*.nf       linguist-language=Nextflow
+*.config   linguist-language=Nextflow
+*.R        linguist-detectable=false
+*.groovy   linguist-detectable=false
+*.py       linguist-detectable=false
+*.bash     linguist-detectable=false
+Dockerfile linguist-detectable=false
