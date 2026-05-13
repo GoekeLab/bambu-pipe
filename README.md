@@ -61,7 +61,7 @@ The pipeline requires a `.csv` formatted samplesheet to define the input data. T
 
 The samplesheet must include the following columns:
 - `sample`: sample name (no spaces or non-alphanumeric characters)
-- `path`: path to the input file (FASTQ, BAM, or RDS)
+- `path`: path to the input file (`fastq` or `bam`)
 - `chemistry`: 10x library chemistry (see Supported 10x Library Chemistries below)
 - `technology`: sequencing technology (`ONT` or `PacBio`)
 
@@ -69,29 +69,26 @@ Note: The first row of the samplesheet must be a header containing the exact col
 
 *Supported Input Formats*
 
-The pipeline is designed to be flexible. Depending on your starting point in the workflow, the `path` column can point to the following file types:
-- **FASTQ**: Raw reads (compressed `.gz` or uncompressed)
-- **BAM**: Demultiplexed and aligned reads
-- **RDS**: Pre-processed bambu read class objects
+The `path` column can point to the following file types:
+- `fastq`: Raw reads (compressed `.gz` or uncompressed)
+- `bam`: Demultiplexed and aligned reads
 
-For more details on starting the pipeline from specific stages, please refer to the [Advanced Usage](#advanced-usage) section. 
+For more details on starting the pipeline directly from BAM, please refer to the [Advanced Usage](#advanced-usage) section.
 
 *Example Samplesheet (Single Sample)*
 ```csv
 sample,path,chemistry,technology
-sample1,path/to/sample1_fastq.gz,10x3v2,ONT
+10x5v2_ONT_example,examples/10x5v2_ONT_example.fastq.gz,10x5v2,ONT
 ```
 
 *Example Samplesheet (Multiple Samples)*
 ```csv
 sample,path,chemistry,technology
-sample1,path/to/sample1_fastq.gz,10x3v2,ONT
-sample2,path/to/sample2_fastq.gz,10x3v3,PacBio
-sample3,path/to/sample3_fastq.gz,10x3v4,ONT
+10x5v2_ONT_example,examples/10x5v2_ONT_example.fastq.gz,10x5v2,ONT
+10x5v2_PacBio_example,examples/10x5v2_PacBio_example_demultiplexed.bam,10x5v2,PacBio
 ```
 
-Note: Example samplesheets are provided in `examples/`.
-If all samples share the same library chemistry and/or sequencing technology, you may omit the `chemistry` and `technology` columns and use the `--chemistry` and `--technology` flags instead.
+Note: Example samplesheets are provided in `examples/`. If all samples share the same library chemistry and/or sequencing technology, you may omit the `chemistry` and `technology` columns and use the `--chemistry` and `--technology` flags instead.
 
 
 *Supported 10x Library Chemistries*
@@ -133,9 +130,7 @@ To configure the executor and container, pass profile types via the `-profile` a
 - `--output_dir` [string, default: 'output']: Path to the output directory
 - `--chemistry` [string, default: null]: Specify if all samples in the samplesheet share the same library chemistry 
 - `--technology` [string, default: null]: Specify if all samples in the samplesheet share the same sequencing technology
-- `--early_stop_stage` [string, default: null]: Stop the pipeline early and output intermediate files (see Advanced Usage section). Options:
-  - "bam": Stops pipeline after minimap2 alignment
-  - "rds": Stops pipeline after Bambu read class construction
+- `--bam_only` [boolean, default: false]: If true, stops the pipeline after genome alignment and saves BAM files only (see Advanced Usage section)
 - `--qscore_filtering` [boolean, default: true]: Enable or disable quality score filtering of reads
 - `--ndr` [float, default: null]: NDR threshold for Bambu transcript discovery. If not set, Bambu will recommend a suitable value
 - `--deduplicate_umis` [boolean, default: true]: If true, Bambu will perform UMI deduplication 
@@ -148,7 +143,7 @@ To configure the executor and container, pass profile types via the `-profile` a
 > **Warning:** We currently recommend processing one sample at a time if `--quantification_mode` is set to `EM_clusters`, as batch effect correction across samples during clustering has not yet been implemented and will be available in a future release.
 
 ### **Output**
-All outputs from the pipeline are written to the directory specified by the `--output_dir` parameter. The pipeline produces per-sample alignment files, per-sample read class files used by Bambu, and the combined transcript discovery and quantification results. The examples below show the output directory structure for both single and multi-sample runs:
+All outputs from the pipeline are written to the directory specified by the `--output_dir` parameter. The pipeline produces per-sample alignment files and the combined transcript discovery and quantification results. The examples below show the output directory structure for both single and multi-sample runs:
 
 *Output Structure (Single Sample)*
 ```
@@ -156,9 +151,6 @@ output/
 ├── bam/                                
 │   ├── sample1_demultiplexed.bam
 │   └── sample1_demultiplexed.bam.bai
-│
-├── read_class/                                
-│   └── sample1_read_class.rds
 │
 ├── extended_annotations.gtf
 ├── se_unique_counts.rds
@@ -183,10 +175,6 @@ output/
 │   ├── sample2_demultiplexed.bam
 │   └── sample2_demultiplexed.bam.bai
 │
-├── read_class/                                
-│   ├── sample1_read_class.rds
-│   └── sample2_read_class.rds
-│
 ├── extended_annotations.gtf
 ├── se_unique_counts.rds
 ├── se_gene_counts.rds
@@ -199,14 +187,13 @@ output/
 ├── se_gene_counts_clusters.rds
 │
 └── software_versions.yml
-``` 
+```
 
 **Description of the Output Files**
 | File | Description 
 |---|---
 | <sample_name>_demultiplexed.bam | BAM file containing demultiplexed, trimmed and aligned reads
 | <sample_name>_demultiplexed.bam.bai | BAM index for the corresponding BAM file
-| <sample_name>_read_class.rds |  An intermediate file used by Bambu that contains the constructed read classes. This file can be used as input in subsequent runs to bypass the initial preprocessing and alignment steps. 
 | extended_annotations.gtf | A `.gtf` file containing the novel transcripts discovered by Bambu as well as the reference annotations provided by the user.
 | se_unique_counts.rds | A [RangedSummarizedExperiment](https://www.rdocumentation.org/packages/SummarizedExperiment/versions/1.2.3/topics/RangedSummarizedExperiment-class) object containing transcript-level unique counts at single-cell resolution, produced prior to EM quantification. Columns follow the `sampleName_barcode` naming convention.
 | se_gene_counts.rds | A RangedSummarizedExperiment object containing gene-level counts at single-cell resolution. Columns follow the `sampleName_barcode` naming convention.
@@ -259,7 +246,6 @@ Example data and pre-configured profiles are provided in `examples/` to run the 
 |---|---|
 | `test_fastq` | Single-sample ONT run from raw reads |
 | `test_bam` | Single-sample ONT run from demultiplexed BAM |
-| `test_rds` | Single-sample ONT run from pre-computed read class object |
 | `test_multi` | Multi-sample run with ONT and PacBio samples |
 
 ```bash
@@ -269,70 +255,41 @@ nextflow run . -profile test_base,test_fastq,singularity
 # Test from BAM input
 nextflow run . -profile test_base,test_bam,singularity
 
-# Test from a pre-computed RDS
-nextflow run . -profile test_base,test_rds,singularity
-
 # Test with multiple samples (ONT + PacBio)
 nextflow run . -profile test_base,test_multi,singularity
 ```
 
 The output files from the smoke tests are written to `.smoke_test/<profile>/output/`.
 
-**Stopping the Pipeline Early**
+**Stopping the Pipeline After Alignment**
 
-The `--early_stop_stage` parameter allows you to stop the pipeline at an intermediate stage and save the outputs for later use. This is useful when you want to inspect intermediate files or when you plan to re-run downstream steps separately.
-
-- `--early_stop_stage bam`: Stops after genome alignment. BAM files are saved to `output/bam/`.
-- `--early_stop_stage rds`: Stops after Bambu read class construction. Read class `.rds` files are saved to `output/read_class/`.
+The `--bam_only` flag stops the pipeline after genome alignment, saving BAM files to `output/bam/`. This is useful when you want to inspect the aligned reads or run downstream steps separately.
 
 ```bash
-# Stop after read class construction
 nextflow run main.nf \
-  --input samplesheet.csv \
-  --genome reference.fa \
-  --annotation reference.gtf \
-  --early_stop_stage rds \
+  --input examples/samplesheet_test_fastq.csv \
+  --genome examples/GRCh38.primary_assembly.genome.chr9_1_1000000.fa \
+  --annotation examples/gencode.v49.primary_assembly.annotation.chr9_1_1000000.gtf \
+  --bam_only true \
   -profile singularity,hpc
 ```
 
-**Restarting from a Specific Stage**
+**Starting the Pipeline Directly from BAM**
 
-Because the pipeline accepts FASTQ, BAM, or RDS files as input, you can restart from any intermediate stage by providing the corresponding files in your samplesheet. This avoids re-running expensive preprocessing and alignment steps when they have already been completed.
-
-*Example: Incremental sample addition*
-
-A common use case is to process an initial set of samples through to read class `.rds` files, then re-run the pipeline once additional samples are available. 
-
-*Step 1* — Run the first batch of samples from FASTQ to `.rds`:
-```bash
-nextflow run main.nf \
-  --input samplesheet_batch1.csv \
-  --genome reference.fa \
-  --annotation reference.gtf \
-  --early_stop_stage rds \
-  -profile singularity,hpc
-```
-
-This produces `output/read_class/sample1_read_class.rds`, `output/read_class/sample2_read_class.rds`, etc.
-
-*Step 2* — When new samples are ready, run all samples together. Point the `path` column at the existing `.rds` files for the original samples and at the new FASTQ/BAM files for the new samples:
+If you have already generated BAM files (e.g. from a previous run with `--bam_only true`), you can skip the preprocessing and alignment steps by pointing the `path` column directly at the BAM files:
 
 ```csv
 sample,path,chemistry,technology
-sample1,output/read_class/sample1_read_class.rds,10x3v3,ONT
-sample2,output/read_class/sample2_read_class.rds,10x3v3,ONT
-sample3,path/to/sample3.fastq.gz,10x3v3,ONT
+10x5v2_ONT_example,examples/10x5v2_ONT_example_demultiplexed.bam,10x5v2,ONT
 ```
 
 ```bash
 nextflow run main.nf \
-  --input samplesheet_all.csv \
-  --genome reference.fa \
-  --annotation reference.gtf \
+  --input examples/samplesheet_test_bam.csv \
+  --genome examples/GRCh38.primary_assembly.genome.chr9_1_1000000.fa \
+  --annotation examples/gencode.v49.primary_assembly.annotation.chr9_1_1000000.gtf \
   -profile singularity,hpc
 ```
-
-The pipeline will skip preprocessing and alignment for `sample1` and `sample2`, process `sample3` from FASTQ through to `.rds`, and then perform transcript discovery and quantification jointly across all three samples.
 
 **Manual Clustering (Under Development)**
 

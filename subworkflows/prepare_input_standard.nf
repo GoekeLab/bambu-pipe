@@ -56,11 +56,9 @@ workflow PREPARE_INPUT_STANDARD {
     def fastq_exts = ['.fastq', '.fq', '.fastq.gz', '.fq.gz']
     ch_fastq = ch_updated_samples.filter { sample, path, meta -> fastq_exts.any { ext -> path.name.endsWith(ext) } }
     ch_bam = ch_updated_samples.filter { sample, path, meta -> path.name.endsWith('.bam') }
-    ch_rds = ch_updated_samples.filter { sample, path, meta -> path.name.endsWith('.rds') }
 
     emit:
     fastq = ch_fastq
     bam = ch_bam
-    rds = ch_rds
     versions = EXTRACT_10X_BARCODES.out.versions.first()
 }

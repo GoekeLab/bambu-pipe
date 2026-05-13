@@ -15,7 +15,6 @@ process BAMBU_TRANSCRIPT_DISCOVERY{
     
 	output:
     path ('quant_data.rds'), emit: quant_data
-    path ('gene_counts.rds'), emit: gene_counts
     path ('se_unique_counts.rds'), emit: se_unique_counts
     path ('se_gene_counts.rds'), emit: se_gene_counts
 	path ('extended_annotations.rds'), emit: extended_annotations
@@ -29,7 +28,13 @@ process BAMBU_TRANSCRIPT_DISCOVERY{
 
     annotation <- readRDS("$bambu_annotation")
     readClassFile <- strsplit("${rds_files.join(',')}", ",")[[1]]
+    sampleNames <- strsplit("${sample.join(',')}", ",")[[1]]
     sampleData <- strsplit("${spatial_metadata_files.join(',')}", ",")[[1]]
+    chemistry  <- setNames(strsplit("${meta.collect { m -> m.chemistry }.join(',')}", ",")[[1]], sampleNames)
+    technology <- setNames(strsplit("${meta.collect { m -> m.technology }.join(',')}", ",")[[1]], sampleNames)
+
+    # Save sampleNames (required for multi-sample Seurat clustering)
+    saveRDS(sampleNames, "sample_names.rds")
     
     # Set sampleData to NA/NULL for non-spatial samples
     containsVisiumStandard <- grepl("visium-v", sampleData)
@@ -47,19 +52,14 @@ process BAMBU_TRANSCRIPT_DISCOVERY{
     discovery = FALSE, quant = FALSE, verbose = FALSE, opt.em = list(degradationBias = FALSE), assignDist = TRUE, sampleData = sampleData)
     saveRDS(quantData, "quant_data.rds")
 
-    # Extract sampleNames from quantData (required for Seurat clustering)
-    saveRDS(unname(sapply(quantData, function(qd) bambu:::getSampleData(qd)\$sampleName[1])), "sample_names.rds") #TODO: Find a more elegant way to extract sampleNames 
-
     # Generate unique counts SE from quantData
     seDiscovery <- generateUniqueCountsSEFromQuantData(quantData, extendedAnno)
+    colData(seDiscovery)\$chemistry  <- chemistry[colData(seDiscovery)\$sampleName] # Add chemistry into colData (for subsequent batch correction)
+    colData(seDiscovery)\$technology <- technology[colData(seDiscovery)\$sampleName] # Add technology into colData (for subsequent batch correction)
     saveRDS(seDiscovery, "se_unique_counts.rds")
 
     # Generate gene counts SE from unique counts SE
     seDiscovery.gene <- transcriptToGeneExpression(seDiscovery)
     saveRDS(seDiscovery.gene, "se_gene_counts.rds")
-
-    # Extract gene count matrix for downstream process
-    geneCounts <- assays(seDiscovery.gene)\$counts
-    saveRDS(geneCounts, "gene_counts.rds")
 	"""
 }

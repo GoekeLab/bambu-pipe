@@ -17,8 +17,8 @@ class Validation {
         if (!params.valid_quantification_modes.contains(params.quantification_mode))
             error "Invalid params.quantification_mode '${params.quantification_mode}' — must be one of: ${params.valid_quantification_modes.join(', ')}"
 
-        if (!params.valid_early_stop_stages.contains(params.early_stop_stage))
-            error "Invalid params.early_stop_stage '${params.early_stop_stage}' — must be one of: rds, bam, or null"
+        if (!(params.bam_only instanceof Boolean))
+            error "Invalid params.bam_only '${params.bam_only}' — must be true or false"
 
         // Numeric range checks
         if (params.resolution <= 0)

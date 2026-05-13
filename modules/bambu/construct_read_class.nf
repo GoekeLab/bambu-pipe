@@ -1,5 +1,4 @@
 process BAMBU_CONSTRUCT_READ_CLASS{
-    publishDir "${params.output_dir}/read_class", mode: 'copy'
     label "r"
     label "low_cpu"
     label "high_mem"
@@ -19,7 +18,9 @@ process BAMBU_CONSTRUCT_READ_CLASS{
     if ("$params.bambu_path" == "null") { library("bambu") } else { library("devtools"); load_all("$params.bambu_path") }
 
 	annotation <- readRDS("$bambu_annotation")
-    readClassFile <- bambu.singlecell(reads = "$bam", annotations = annotation, genome = "$genome", 
+    # Rename BAM to val(sample) so bambu derives sampleName from val(sample), regardless of the original filename
+    file.symlink("$bam", "${sample}.bam")
+    readClassFile <- bambu.singlecell(reads = "${sample}.bam", annotations = annotation, genome = "$genome",
         ncore = $task.cpus, discovery = FALSE, quant = FALSE, verbose = FALSE, assignDist = FALSE, 
         processByChromosome = as.logical("$params.process_by_chromosome"), yieldSize = 10000000)
     saveRDS(readClassFile[[1]], "${sample}_read_class.rds") 
