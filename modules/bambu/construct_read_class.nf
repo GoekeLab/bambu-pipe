@@ -1,4 +1,5 @@
 process BAMBU_CONSTRUCT_READ_CLASS{
+    publishDir "$params.output_dir/intermediate_R/read_class", mode: 'copy', pattern: '*_read_class.rds', enabled: params.save_intermediates
     label "r"
     label "low_cpu"
     label "high_mem"
