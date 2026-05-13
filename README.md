@@ -140,8 +140,6 @@ To configure the executor and container, pass profile types via the `-profile` a
   - "EM_clusters": Performs gene expression-based cell clustering using [Seurat](https://satijalab.org/seurat/), followed by transcript quantification at the cluster level
 - `--resolution` [float, default: 0.8]: Seurat clustering resolution
 
-> **Warning:** We currently recommend processing one sample at a time if `--quantification_mode` is set to `EM_clusters`, as batch effect correction across samples during clustering has not yet been implemented and will be available in a future release.
-
 ### **Output**
 All outputs from the pipeline are written to the directory specified by the `--output_dir` parameter. The pipeline produces per-sample alignment files and the combined transcript discovery and quantification results. The examples below show the output directory structure for both single and multi-sample runs:
 
@@ -160,6 +158,7 @@ output/
 ├── se_transcript_counts_singlecell.rds
 │
 │   # clustered EM:
+├── seurat_obj.rds
 ├── se_transcript_counts_clusters.rds
 ├── se_gene_counts_clusters.rds
 │
@@ -183,6 +182,7 @@ output/
 ├── se_transcript_counts_singlecell.rds
 │
 │   # clustered EM:
+├── seurat_obj.rds
 ├── se_transcript_counts_clusters.rds
 ├── se_gene_counts_clusters.rds
 │
@@ -195,11 +195,12 @@ output/
 | <sample_name>_demultiplexed.bam | BAM file containing demultiplexed, trimmed and aligned reads
 | <sample_name>_demultiplexed.bam.bai | BAM index for the corresponding BAM file
 | extended_annotations.gtf | A `.gtf` file containing the novel transcripts discovered by Bambu as well as the reference annotations provided by the user.
+| seurat_obj.rds | A [SeuratObject](https://satijalab.github.io/seurat-object/reference/Seurat-class.html) containing normalised counts, PCA embeddings, and cluster assignments. For multi-sample runs, also contains Harmony-integrated embeddings corrected for sequencing technology and capture chemistry. UMAP has not been computed. Only produced when `--quantification_mode` is set to `EM_clusters`.
 | se_unique_counts.rds | A [RangedSummarizedExperiment](https://www.rdocumentation.org/packages/SummarizedExperiment/versions/1.2.3/topics/RangedSummarizedExperiment-class) object containing transcript-level unique counts at single-cell resolution, produced prior to EM quantification. Columns follow the `sampleName_barcode` naming convention.
 | se_gene_counts.rds | A RangedSummarizedExperiment object containing gene-level counts at single-cell resolution. Columns follow the `sampleName_barcode` naming convention.
-| se_transcript_counts_singlecell.rds | A RangedSummarizedExperiment object containing per-cell transcript counts after EM quantification. Columns follow the `sampleName_barcode` naming convention. Only produced when EM is run without cluster assignments.
-| se_transcript_counts_clusters.rds | A RangedSummarizedExperiment object containing cluster-level transcript counts after EM quantification. Columns follow the `sampleName_clusterId` naming convention. Only produced when EM is run with clustering.
-| se_gene_counts_clusters.rds | A RangedSummarizedExperiment object containing cluster-level gene counts. Columns follow the `sampleName_clusterId` naming convention. Only produced when EM is run with clustering.
+| se_transcript_counts_singlecell.rds | A RangedSummarizedExperiment object containing per-cell transcript counts after EM quantification. Columns follow the `sampleName_barcode` naming convention. Only produced when `--quantification_mode` is set to `EM`.
+| se_transcript_counts_clusters.rds | A RangedSummarizedExperiment object containing cluster-level transcript counts after EM quantification. Columns follow the `sampleName_clusterId` naming convention. Only produced when `--quantification_mode` is set to `EM_clusters`.
+| se_gene_counts_clusters.rds | A RangedSummarizedExperiment object containing cluster-level gene counts. Columns follow the `sampleName_clusterId` naming convention. Only produced when `--quantification_mode` is set to `EM_clusters`.
 | software_versions.yml | A YAML file listing the versions of all software tools used during the pipeline run.
 
 **Count Matrices**

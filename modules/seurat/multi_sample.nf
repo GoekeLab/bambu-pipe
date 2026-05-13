@@ -1,5 +1,6 @@
 process SEURAT_MULTI_SAMPLE {
-    publishDir "$params.output_dir/intermediate_R", mode: 'copy', pattern: '*.rds', enabled: params.save_intermediates
+    publishDir "$params.output_dir", mode: 'copy', pattern: 'seurat_obj.rds'
+    publishDir "$params.output_dir/intermediate_R", mode: 'copy', pattern: 'clusters.rds', enabled: params.save_intermediates
     label "r"
     label "medium_cpu"
     label "high_mem"
@@ -11,7 +12,7 @@ process SEURAT_MULTI_SAMPLE {
 
     output:
     path ('clusters.rds'), emit: clusters
-    path ('cell_mix.rds'), optional: true, emit: cell_mix
+    path ('seurat_obj.rds'), emit: seurat_obj
     path "versions.yml", emit: versions
 
     script:
@@ -50,9 +51,10 @@ process SEURAT_MULTI_SAMPLE {
         verbose        = FALSE
     )
 
+    dim <- min(dim, ncol(cellMix[["harmony"]]))
     cellMix <- FindNeighbors(cellMix, reduction = "harmony", dims = 1:dim)
     cellMix <- FindClusters(cellMix, resolution = $params.resolution, cluster.name = "harmony_clusters")
-    saveRDS(cellMix, "cell_mix.rds")
+    saveRDS(cellMix, "seurat_obj.rds")
 
     # Build ordered list of CompressedCharacterLists, one per sample, in quantData order
     allBarcodes   <- names(cellMix\$harmony_clusters)
