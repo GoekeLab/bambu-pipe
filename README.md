@@ -199,8 +199,8 @@ output/
 | se_unique_counts.rds | A [RangedSummarizedExperiment](https://www.rdocumentation.org/packages/SummarizedExperiment/versions/1.2.3/topics/RangedSummarizedExperiment-class) object containing transcript-level unique counts at single-cell resolution, produced prior to EM quantification. Columns follow the `sampleName_barcode` naming convention.
 | se_gene_counts.rds | A RangedSummarizedExperiment object containing gene-level counts at single-cell resolution. Columns follow the `sampleName_barcode` naming convention.
 | se_transcript_counts_singlecell.rds | A RangedSummarizedExperiment object containing per-cell transcript counts after EM quantification. Columns follow the `sampleName_barcode` naming convention. Only produced when `--quantification_mode` is set to `EM`.
-| se_transcript_counts_clusters.rds | A RangedSummarizedExperiment object containing cluster-level transcript counts after EM quantification. Columns follow the `sampleName_clusterId` naming convention. Only produced when `--quantification_mode` is set to `EM_clusters`.
-| se_gene_counts_clusters.rds | A RangedSummarizedExperiment object containing cluster-level gene counts. Columns follow the `sampleName_clusterId` naming convention. Only produced when `--quantification_mode` is set to `EM_clusters`.
+| se_transcript_counts_clusters.rds | A RangedSummarizedExperiment object containing cluster-level transcript counts after EM quantification. Columns follow the `clusterId` naming convention for single-sample runs, and `sampleName_clusterId` for multi-sample runs. Only produced when `--quantification_mode` is set to `EM_clusters`.
+| se_gene_counts_clusters.rds | A RangedSummarizedExperiment object containing cluster-level gene counts. Columns follow the `clusterId` naming convention for single-sample runs, and `sampleName_clusterId` for multi-sample runs. Only produced when `--quantification_mode` is set to `EM_clusters`.
 | software_versions.yml | A YAML file listing the versions of all software tools used during the pipeline run.
 
 **Count Matrices**
