@@ -55,7 +55,7 @@ workflow {
 
     if (!params.bam_only) {
         // process bam samples
-        ch_bam_files = ALIGNMENT.out.bam.concat(ch_input_bam)
+        ch_bam_files = ALIGNMENT.out.bam.mix(ch_input_bam)
         BAMBU_PREPARE_ANNOTATION(ch_annotation)
         ch_versions = ch_versions.mix(BAMBU_PREPARE_ANNOTATION.out.versions)
         BAMBU_CONSTRUCT_READ_CLASS(ch_bam_files, ch_genome, BAMBU_PREPARE_ANNOTATION.out.annotation)
