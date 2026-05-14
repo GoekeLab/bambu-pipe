@@ -25,7 +25,7 @@ This file contains all notable changes to Bambu-Pipe.
 - `quantification_mode` parameter to control quantification strategy (`no_quant`, `EM`, `EM_clusters`)
 - Seurat clustering as a dedicated process (`SEURAT_CLUSTERING`) for cluster-based EM quantification
 - Joint clustering across all samples on a combined gene counts matrix (previously per-sample)
-- Cluster output restructured to an ordered list of `CompressedCharacterList`s, one per sample in `quantData` order (previously a flat single CCL mixing all samples)
+- Cluster output restructured to an ordered list of `CompressedCharacterList`, one per sample in `quantData` order (previously a flat single CCL mixing all samples)
 - `SEURAT_CLUSTERING` now takes gene counts matrix and sample names as inputs instead of the full `quantData` object
 - `clusterCells` helper inlined into the process (previously sourced from `bin/utilityFunctions.R`)
 - `early_stop_stage` parameter to terminate the pipeline after BAM or RDS generation
