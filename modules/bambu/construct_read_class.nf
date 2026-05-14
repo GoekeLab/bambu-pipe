@@ -12,6 +12,7 @@ process BAMBU_CONSTRUCT_READ_CLASS{
     
     output:
     tuple val(sample), path("${sample}_read_class.rds"), val(meta), emit: rds
+    path "versions.yml", topic: 'versions'
 
     script:
     """
@@ -24,6 +25,8 @@ process BAMBU_CONSTRUCT_READ_CLASS{
     readClassFile <- bambu.singlecell(reads = "${sample}.bam", annotations = annotation, genome = "$genome",
         ncore = $task.cpus, discovery = FALSE, quant = FALSE, verbose = FALSE, assignDist = FALSE, 
         processByChromosome = as.logical("$params.process_by_chromosome"), yieldSize = 10000000)
-    saveRDS(readClassFile[[1]], "${sample}_read_class.rds") 
+    saveRDS(readClassFile[[1]], "${sample}_read_class.rds")
+    
+    writeLines(c('"${task.process}":', paste0('    bambu: ', as.character(packageVersion("bambu")))), "versions.yml")
     """
 }

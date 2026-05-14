@@ -20,6 +20,7 @@ process BAMBU_TRANSCRIPT_DISCOVERY{
 	path ('extended_annotations.rds'), emit: extended_annotations
     path ('extended_annotations.gtf'), emit: extended_annotations_gtf
     path ('sample_names.rds'), emit: sample_names
+    path "versions.yml", topic: 'versions'
 
 	script:
 	""" 
@@ -33,14 +34,6 @@ process BAMBU_TRANSCRIPT_DISCOVERY{
     chemistry  <- setNames(strsplit("${meta.collect { m -> m.chemistry }.join(',')}", ",")[[1]], sampleNames)
     technology <- setNames(strsplit("${meta.collect { m -> m.technology }.join(',')}", ",")[[1]], sampleNames)
 
-    # Save sampleNames (required for multi-sample Seurat clustering)
-    saveRDS(sampleNames, "sample_names.rds")
-    
-    # Set sampleData to NA/NULL for non-spatial samples
-    containsVisiumStandard <- grepl("visium-v", sampleData)
-    sampleData[!containsVisiumStandard] <- NA
-    sampleData <- if (all(is.na(sampleData))) NULL else sampleData
-
     # Transcript discovery
     extendedAnno <- bambu.singlecell(reads = readClassFile, annotations = annotation, genome = "$genome", ncore = $task.cpus, 
     discovery = TRUE, quant = FALSE, verbose = FALSE, assignDist = FALSE, NDR = $ndr)
@@ -48,6 +41,7 @@ process BAMBU_TRANSCRIPT_DISCOVERY{
     writeToGTF(extendedAnno, "extended_annotations.gtf")
 
     # Quantification without EM
+    sampleData <- if (any(startsWith(chemistry, "visium-v"))) sampleData else NULL # Add spatial metadata for visium samples
     quantData <- bambu.singlecell(reads = readClassFile, annotations = extendedAnno, genome = "$genome", ncore = $task.cpus, 
     discovery = FALSE, quant = FALSE, verbose = FALSE, opt.em = list(degradationBias = FALSE), assignDist = TRUE, sampleData = sampleData)
     saveRDS(quantData, "quant_data.rds")
@@ -61,5 +55,10 @@ process BAMBU_TRANSCRIPT_DISCOVERY{
     # Generate gene counts SE from unique counts SE
     seDiscovery.gene <- transcriptToGeneExpression(seDiscovery)
     saveRDS(seDiscovery.gene, "se_gene_counts.rds")
+
+    # Save sampleNames (required for multi-sample Seurat clustering)
+    saveRDS(sampleNames, "sample_names.rds")
+    
+    writeLines(c('"${task.process}":', paste0('    bambu: ', as.character(packageVersion("bambu")))), "versions.yml")
 	"""
 }

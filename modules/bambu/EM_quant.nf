@@ -1,5 +1,5 @@
 process BAMBU_EM{
-	publishDir "$params.output_dir", mode: 'copy'
+	publishDir "$params.output_dir", mode: 'copy', pattern: '*.rds'
     label "r"
     label "low_cpu"
     label "high_mem"
@@ -14,6 +14,7 @@ process BAMBU_EM{
     output:
     path ('se_transcript_counts_*.rds')
     path ('se_gene_counts_clusters.rds'), optional: true
+    path "versions.yml", topic: 'versions'
 
     script:
     """
@@ -46,5 +47,7 @@ process BAMBU_EM{
         saveRDS(se, "se_transcript_counts_clusters.rds")
         saveRDS(transcriptToGeneExpression(se), "se_gene_counts_clusters.rds")
     }
+    
+    writeLines(c('"${task.process}":', paste0('    bambu: ', as.character(packageVersion("bambu")))), "versions.yml")
     """
 }

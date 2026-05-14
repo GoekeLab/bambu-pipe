@@ -34,10 +34,8 @@ This pipeline performs context-aware transcript discovery and quantification fro
 
 ### **Installation** 
 Install the following dependencies before running the pipeline:
-- [Nextflow](https://www.nextflow.io/docs/latest/install.html) 
+- [Nextflow](https://www.nextflow.io/docs/latest/install.html) ≥ 25.04
 - [Docker](https://docs.docker.com/engine/install/ubuntu/) (or [Singularity](https://docs.sylabs.io/guides/3.0/user-guide/installation.html) if you do not have user permissions for Docker). 
-
-The latest version for each dependency is recommended. 
 
 ### **General Usage** 
 To run the pipeline, you must provide a samplesheet, reference genome, and reference annotation file as input. The pipeline performs transcript discovery and quantification on either a single sample or multiple samples based on the number of samples specified in the samplesheet. Refer to the [Parameters](#parameters) and Samplesheet (CSV) sections below for more details. 

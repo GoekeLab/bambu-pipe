@@ -17,7 +17,7 @@ process PREPROCESS_FASTQ {
     output:
     tuple val(sample), path("${sample}_preprocessed_reads.fastq.gz"), val(meta), emit: fastq
     path("*_intermediate_*"), optional: true
-    path "versions.yml", emit: versions
+    path "versions.yml", topic: 'versions'
 
     script:
     """

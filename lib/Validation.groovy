@@ -28,4 +28,29 @@ class Validation {
             error "Invalid params.ndr '${params.ndr}' — must be a float between 0 and 1"
     }
 
+    static def validateVisiumSampleCount(samples) {
+        def has_visium = samples.any { sample, path, meta -> meta.chemistry.startsWith('visium') }
+        if (has_visium && samples.size() > 1)
+            error "Visium chemistry requires exactly 1 sample, but found ${samples.size()}"
+    }
+
+    static def validateRow(row, params, log) {
+        ["sample", "path", "chemistry", "technology"].each { col ->
+            if (!row.containsKey(col))
+                error "Samplesheet is missing a required '${col}' column"
+            if (!row[col])
+                error "A row in the samplesheet has an empty '${col}' value"
+        }
+
+        if (!params.valid_chemistries.contains(row.chemistry)) {
+            if (row.path.endsWith('.bam'))
+                log.warn "Sample '${row.sample}' has custom chemistry '${row.chemistry}' — please check that this is intentional."
+            else
+                error "Sample '${row.sample}' has invalid chemistry '${row.chemistry}' — must be one of: ${params.valid_chemistries.join(', ')}"
+        }
+
+        if (!params.valid_technologies.contains(row.technology))
+            error "Sample '${row.sample}' has invalid technology '${row.technology}' — must be one of: ${params.valid_technologies.join(', ')}"
+    }
+
 }

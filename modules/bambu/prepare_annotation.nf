@@ -9,7 +9,7 @@ process BAMBU_PREPARE_ANNOTATION{
 
     output:
     path("bambu_annotation.rds"), emit: annotation
-    path "versions.yml", emit: versions
+    path "versions.yml", topic: 'versions'
 
     script:
     """
@@ -18,6 +18,7 @@ process BAMBU_PREPARE_ANNOTATION{
 
     annotation <- prepareAnnotations("$annotation")
     saveRDS(annotation, "bambu_annotation.rds")
+    
     writeLines(c('"${task.process}":', paste0('    bambu: ', as.character(packageVersion("bambu")))), "versions.yml")
     """
 }
