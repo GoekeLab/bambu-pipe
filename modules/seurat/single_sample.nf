@@ -17,7 +17,8 @@ process SEURAT_SINGLE_SAMPLE {
     script:
     """
     #!/usr/bin/env Rscript
-    if ("$params.bambu_path" == "null") { library("bambu") } else { library("devtools"); load_all("$params.bambu_path") }
+    library(SummarizedExperiment)
+    library(IRanges)
     library(Seurat)
 
     se     <- readRDS("$se")

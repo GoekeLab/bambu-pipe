@@ -18,7 +18,8 @@ process SEURAT_MULTI_SAMPLE {
     script:
     """
     #!/usr/bin/env Rscript
-    if ("$params.bambu_path" == "null") { library("bambu") } else { library("devtools"); load_all("$params.bambu_path") }
+    library(SummarizedExperiment)
+    library(IRanges)
     library(Seurat)
 
     # Extract gene count matrix and colData metadata
@@ -31,6 +32,7 @@ process SEURAT_MULTI_SAMPLE {
     cellMix\$sample     <- setNames(colData(se)\$sampleName,  colnames(se))
     cellMix\$chemistry  <- setNames(colData(se)\$chemistry,   colnames(se))
     cellMix\$technology <- setNames(colData(se)\$technology,  colnames(se))
+    cellMix\$orig.ident <- cellMix\$sample
 
     # scRNA-seq multi-sample integration using Harmony adapted from https://satijalab.org/seurat/articles/seurat5_integration
     cellMix[["RNA"]] <- split(cellMix[["RNA"]], f = cellMix\$sample)

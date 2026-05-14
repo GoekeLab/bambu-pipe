@@ -54,8 +54,8 @@ process BAMBU_TRANSCRIPT_DISCOVERY{
 
     # Generate unique counts SE from quantData
     seDiscovery <- generateUniqueCountsSEFromQuantData(quantData, extendedAnno)
-    colData(seDiscovery)\$chemistry  <- chemistry[colData(seDiscovery)\$sampleName] # Add chemistry into colData (for subsequent batch correction)
-    colData(seDiscovery)\$technology <- technology[colData(seDiscovery)\$sampleName] # Add technology into colData (for subsequent batch correction)
+    colData(seDiscovery)\$chemistry  <- unname(chemistry[colData(seDiscovery)\$sampleName]) # Add chemistry into colData (for subsequent batch correction)
+    colData(seDiscovery)\$technology <- unname(technology[colData(seDiscovery)\$sampleName]) # Add technology into colData (for subsequent batch correction)
     saveRDS(seDiscovery, "se_unique_counts.rds")
 
     # Generate gene counts SE from unique counts SE
