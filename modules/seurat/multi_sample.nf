@@ -22,18 +22,15 @@ process SEURAT_MULTI_SAMPLE {
     library(Seurat)
 
     # Extract gene count matrix and colData metadata
-    se           <- readRDS("$se")
-    counts       <- assays(se)\$counts
-    dim          <- $params.seurat_dim_multi
-    chemistry    <- as.character(colData(se)\$chemistry)
-    technology   <- as.character(colData(se)\$technology)
-    sampleLabels <- as.character(colData(se)\$sampleName)
+    se     <- readRDS("$se")
+    counts <- assays(se)\$counts
+    dim    <- $params.seurat_dim_multi
 
     # Create Seurat object and append metadata
     cellMix <- CreateSeuratObject(counts = counts, project = "cellMix", min.cells = 1)
-    cellMix\$sample     <- sampleLabels
-    cellMix\$chemistry  <- chemistry
-    cellMix\$technology <- technology
+    cellMix\$sample     <- setNames(colData(se)\$sampleName,  colnames(se))
+    cellMix\$chemistry  <- setNames(colData(se)\$chemistry,   colnames(se))
+    cellMix\$technology <- setNames(colData(se)\$technology,  colnames(se))
 
     # scRNA-seq multi-sample integration using Harmony adapted from https://satijalab.org/seurat/articles/seurat5_integration
     cellMix[["RNA"]] <- split(cellMix[["RNA"]], f = cellMix\$sample)
