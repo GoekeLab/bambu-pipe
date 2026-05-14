@@ -65,7 +65,7 @@ The samplesheet must include the following columns:
 - `chemistry`: 10x library chemistry (see Supported 10x Library Chemistries below)
 - `technology`: sequencing technology (`ONT` or `PacBio`)
 
-Note: The first row of the samplesheet must be a header containing the exact column names: `sample`, `path`, `chemistry`, and `technology`. 
+> **Note:** The first row of the samplesheet must be a header containing the exact column names: `sample`, `path`, `chemistry`, and `technology`.
 
 *Supported Input Formats*
 
@@ -88,7 +88,7 @@ sample,path,chemistry,technology
 10x5v2_PacBio_example,examples/10x5v2_PacBio_example_demultiplexed.bam,10x5v2,PacBio
 ```
 
-Note: Example samplesheets are provided in `examples/`. If all samples share the same library chemistry and/or sequencing technology, you may omit the `chemistry` and `technology` columns and use the `--chemistry` and `--technology` flags instead.
+> **Note:** Example samplesheets are provided in `examples/`. If all samples share the same library chemistry and/or sequencing technology, you may omit the `chemistry` and `technology` columns and use the `--chemistry` and `--technology` flags instead.
 
 
 *Supported 10x Library Chemistries*
@@ -211,7 +211,7 @@ The [RangedSummarizedExperiment](https://www.rdocumentation.org/packages/Summari
 - `fullLengthCounts`: estimates of read counts mapped as full length reads for each transcript
 - `uniqueCounts`: counts of reads that are uniquely mapped to each transcript 
 
-Note: In `se_unique_counts.rds`, unique counts are stored under the `counts` assay, not `uniqueCounts`.
+> **Note:** In `se_unique_counts.rds`, unique counts are stored under the `counts` assay, not `uniqueCounts`.
 
 
 ### **Spatial Analysis**
@@ -290,6 +290,39 @@ nextflow run main.nf \
   --genome examples/GRCh38.primary_assembly.genome.chr9_1_1000000.fa \
   --annotation examples/gencode.v49.primary_assembly.annotation.chr9_1_1000000.gtf \
   -profile singularity,hpc
+```
+
+**Visualising Clustering Results**
+
+The `seurat_obj.rds` output contains PCA embeddings and cluster assignments but does not include a UMAP. The examples below show how to compute UMAP and visualise clusters in R.
+
+> **Note:** These examples use output generated from the smoke tests (`test_fastq` for single sample, `test_multi` for multiple samples), which are not representative of real datasets.
+
+*Single sample*
+```r
+library(Seurat)
+
+obj <- readRDS("examples/seurat_obj_single_sample.rds")
+dim <- min(15, ncol(obj[["pca"]]))
+obj <- RunUMAP(obj, dims = 1:dim, reduction = "pca")
+DimPlot(obj, reduction = "umap", label = TRUE)
+```
+
+*Multiple samples*
+
+For multi-sample runs, UMAP is computed from the Harmony-corrected embeddings, and cells can be coloured by cluster, sample, or other metadata.
+```r
+library(Seurat)
+
+obj <- readRDS("examples/seurat_obj_multi_sample.rds")
+dim <- min(30, ncol(obj[["harmony"]]))
+obj <- RunUMAP(obj, dims = 1:dim, reduction = "harmony")
+
+# Colour by cluster
+DimPlot(obj, reduction = "umap", group.by = "harmony_clusters", label = TRUE)
+
+# Colour by sample
+DimPlot(obj, reduction = "umap", group.by = "sample")
 ```
 
 **Manual Clustering (Under Development)**
