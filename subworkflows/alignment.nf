@@ -11,13 +11,13 @@ workflow ALIGNMENT {
     main:
     // ch_gate emits one item if fastq channel is non-empty, else emits nothing. Used to prevent MINIMAP_BUILD_INDEX and PAFTOOLS_GFF2BED
     // from running when there are no fastq samples to process
-    ch_gate = ch_unaligned_fastq.first().map { _ -> true }
+    ch_gate = ch_unaligned_fastq.first().map { _x -> true }
 
     // Build minimap2 index based on reference genome
-    MINIMAP_BUILD_INDEX(ch_genome.combine(ch_gate).map { g, _ -> g })
+    MINIMAP_BUILD_INDEX(ch_genome.combine(ch_gate).map { g, _gate -> g })
 
     // Convert gtf/gff annotation to bed format
-    PAFTOOLS_GFF2BED(ch_annotation.combine(ch_gate).map { a, _ -> a })
+    PAFTOOLS_GFF2BED(ch_annotation.combine(ch_gate).map { a, _gate -> a })
 
     // Minimap alignment
     MINIMAP_ALIGNMENT(ch_unaligned_fastq, MINIMAP_BUILD_INDEX.out.index.first(), PAFTOOLS_GFF2BED.out.first())
