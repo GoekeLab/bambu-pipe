@@ -59,6 +59,6 @@ process BAMBU_TRANSCRIPT_DISCOVERY{
     # Save sampleNames (required for multi-sample Seurat clustering)
     saveRDS(sampleNames, "sample_names.rds")
     
-    writeLines(c('"${task.process}":', paste0('    bambu: ', as.character(packageVersion("bambu")))), "versions.yml")
+    writeLines(c('"${task.process}":', paste0('    R: ', R.Version()\$version.string), paste0('    bambu: ', as.character(packageVersion("bambu")))), "versions.yml")
 	"""
 }

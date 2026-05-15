@@ -19,6 +19,6 @@ process BAMBU_PREPARE_ANNOTATION{
     annotation <- prepareAnnotations("$annotation")
     saveRDS(annotation, "bambu_annotation.rds")
     
-    writeLines(c('"${task.process}":', paste0('    bambu: ', as.character(packageVersion("bambu")))), "versions.yml")
+    writeLines(c('"${task.process}":', paste0('    R: ', R.Version()\$version.string), paste0('    bambu: ', as.character(packageVersion("bambu")))), "versions.yml")
     """
 }

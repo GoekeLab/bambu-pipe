@@ -122,6 +122,7 @@ process PREPROCESS_FASTQ {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
+        python: \$(python3 --version 2>&1)
         chopper: \$(chopper --version 2>&1 | head -1)
         cutadapt: \$(cutadapt --version 2>&1 | head -1)
         flexiplex: \$(flexiplex --version 2>&1 | head -1)

@@ -48,6 +48,6 @@ process BAMBU_EM{
         saveRDS(transcriptToGeneExpression(se), "se_gene_counts_clusters.rds")
     }
     
-    writeLines(c('"${task.process}":', paste0('    bambu: ', as.character(packageVersion("bambu")))), "versions.yml")
+    writeLines(c('"${task.process}":', paste0('    R: ', R.Version()\$version.string), paste0('    bambu: ', as.character(packageVersion("bambu")))), "versions.yml")
     """
 }

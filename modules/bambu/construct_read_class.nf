@@ -27,6 +27,6 @@ process BAMBU_CONSTRUCT_READ_CLASS{
         processByChromosome = as.logical("$params.process_by_chromosome"), yieldSize = 10000000)
     saveRDS(readClassFile[[1]], "${sample}_read_class.rds")
     
-    writeLines(c('"${task.process}":', paste0('    bambu: ', as.character(packageVersion("bambu")))), "versions.yml")
+    writeLines(c('"${task.process}":', paste0('    R: ', R.Version()\$version.string), paste0('    bambu: ', as.character(packageVersion("bambu")))), "versions.yml")
     """
 }

@@ -70,6 +70,7 @@ process SEURAT_MULTI_SAMPLE {
 
     writeLines(c(
         '"${task.process}":',
+        paste0('    R: ',                   R.Version()\$version.string),
         paste0('    seurat: ',              as.character(packageVersion("Seurat"))),
         paste0('    IRanges: ',             as.character(packageVersion("IRanges"))),
         paste0('    SummarizedExperiment: ', as.character(packageVersion("SummarizedExperiment")))

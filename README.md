@@ -91,7 +91,7 @@ sample,path,chemistry,technology
 
 *Supported 10x Library Chemistries*
 
-The following single cell and spatial library chemistries are supported. Please specify the sample chemistry in the samplesheet as shown:
+For the following chemistries, the pipeline handles the full workflow — FASTQ preprocessing, genome alignment, and transcript discovery and quantification. Please specify the sample chemistry in the samplesheet as shown:
 - `10x3v2` (Single Cell 3' v2)
 - `10x3v3` (Single Cell 3' v3 & Next GEM Single Cell 3' v3.1)
 - `10x3v4` (GEM-X Single Cell 3' v4)
@@ -102,6 +102,10 @@ The following single cell and spatial library chemistries are supported. Please 
 - `visium-v3` (Visium Spatial Gene Expression Slide 6.5 mm; serial prefix V3)
 - `visium-v4` (Visium CytAssist Spatial Gene Expression Slide 6.5 mm; serial prefix V4)
 - `visium-v5` (Visium CytAssist Spatial Gene Expression Slide 11mm; serial prefix V5)
+
+*Custom Chemistry*
+
+If your dataset uses a chemistry not listed above, or if you prefer to handle FASTQ preprocessing and genome alignment manually, provide a pre-processed, demultiplexed BAM file as input. See the [Advanced Usage](#advanced-usage) section for details.
 
 **Pipeline Configuration**
 
@@ -259,6 +263,19 @@ nextflow run . -profile test_base,test_multi,singularity
 ```
 
 The output files from the smoke tests are written to `.smoke_test/<profile>/output/`.
+
+**Running Pipeline with a Custom Chemistry or Pre-aligned BAM**
+
+If your dataset uses a chemistry not listed under Supported 10x Library Chemistries, or if you prefer to perform FASTQ preprocessing and genome alignment manually, start the pipeline directly from a pre-processed, demultiplexed BAM file. The BAM file must have the barcode and UMI information encoded either in the `CB`/`UB` column, or in the read name using the format `<barcode>_<umi>#<read_id>`.
+
+*Samplesheet (Custom Chemistry)*
+
+For samples with a custom chemistry, set the `chemistry` field in the samplesheet to any descriptive string.
+
+```csv
+sample,path,chemistry,technology
+custom_example,examples/custom_example.bam,my_custom_chemistry,ONT
+```
 
 **Stopping the Pipeline After Alignment**
 
