@@ -8,7 +8,7 @@ process BAMBU_TRANSCRIPT_DISCOVERY{
     label "medium"
 
 	input:
-    tuple val(sample), path(rds_files), val(meta), path(spatial_metadata_files, stageAs: '?/*') // stageAs prevents filename collisions when multiple samples share the same metadata filename
+    tuple val(sample), path(rds_files), val(meta), path(spatial_metadata_files)
 	path(genome)
 	path(bambu_annotation)
     val(ndr)

@@ -45,9 +45,9 @@ To run the pipeline, you must provide a samplesheet, reference genome, and refer
 Use the command below to run the pipeline on the test data provided in `examples/`
 ``` 
 nextflow run main.nf \
-  --input examples/samplesheet_test_fastq.csv \
-  --genome examples/GRCh38.primary_assembly.genome.chr9_1_1000000.fa \
-  --annotation examples/gencode.v49.primary_assembly.annotation.chr9_1_1000000.gtf \
+  --input examples/samplesheet_test_sc_fastq.csv \
+  --genome examples/GRCh38.primary_assembly.genome.chr21.fa.gz \
+  --annotation examples/gencode.v49.primary_assembly.annotation.chr21.gtf.gz \
   -profile singularity,hpc
 ``` 
 
@@ -83,7 +83,7 @@ sample,path,chemistry,technology
 ```csv
 sample,path,chemistry,technology
 10x5v2_ONT_example,examples/10x5v2_ONT_example.fastq.gz,10x5v2,ONT
-10x5v2_PacBio_example,examples/10x5v2_PacBio_example_demultiplexed.bam,10x5v2,PacBio
+10x5v3_ONT_example,examples/10x5v3_ONT_example_demultiplexed.bam,10x5v3,ONT
 ```
 
 > **Note:** Example samplesheets are provided in `examples/`. If all samples share the same library chemistry and/or sequencing technology, you may omit the `chemistry` and `technology` columns and use the `--chemistry` and `--technology` flags instead.
@@ -102,6 +102,8 @@ For the following chemistries, the pipeline handles the full workflow — FASTQ 
 - `visium-v3` (Visium Spatial Gene Expression Slide 6.5 mm; serial prefix V3)
 - `visium-v4` (Visium CytAssist Spatial Gene Expression Slide 6.5 mm; serial prefix V4)
 - `visium-v5` (Visium CytAssist Spatial Gene Expression Slide 11mm; serial prefix V5)
+
+> **Note:** Visium samples must be run one sample at a time. Multi-sample runs are not supported for Visium chemistries.
 
 *Custom Chemistry*
 
@@ -125,8 +127,8 @@ To configure the executor and container, pass profile types via the `-profile` a
 
 **Mandatory**
 - `--input` [string]: Path to the samplesheet .csv file 
-- `--genome` [string]: Path to the reference genome .fa or .fasta file 
-- `--annotation` [string]: Path to the reference annotation .gtf or .gff file 
+- `--genome` [string]: Path to the reference genome `.fa`, `.fasta`, or `.fa.gz` file 
+- `--annotation` [string]: Path to the reference annotation `.gtf`, `.gff`, `.gtf.gz`, or `.gff.gz` file 
 
 **Optional**
 - `--output_dir` [string, default: 'output']: Path to the output directory
@@ -247,19 +249,27 @@ Example data and pre-configured profiles are provided in `examples/` to run the 
 
 | Profile | Description |
 |---|---|
-| `test_fastq` | Single-sample ONT run from raw reads |
-| `test_bam` | Single-sample ONT run from demultiplexed BAM |
-| `test_multi` | Multi-sample run with ONT and PacBio samples |
+| `test_sc_fastq` | Single-cell, single-sample ONT run from raw reads |
+| `test_sc_bam` | Single-cell, single-sample ONT run from demultiplexed BAM |
+| `test_sc_multi` | Single-cell, multi-sample ONT run across two chemistries (10x5v2 FASTQ + 10x5v3 BAM) |
+| `test_visium` | Spatial (Visium), single-sample ONT run from raw reads |
+| `test_custom` | Custom chemistry, single-sample ONT run from demultiplexed BAM |
 
 ```bash
-# Test from FASTQ input
-nextflow run . -profile test_base,test_fastq,singularity
+# Single-cell: test from FASTQ input
+nextflow run . -profile test_base,test_sc_fastq,singularity
 
-# Test from BAM input
-nextflow run . -profile test_base,test_bam,singularity
+# Single-cell: test from BAM input
+nextflow run . -profile test_base,test_sc_bam,singularity
 
-# Test with multiple samples (ONT + PacBio)
-nextflow run . -profile test_base,test_multi,singularity
+# Single-cell: test with multiple samples (ONT + PacBio)
+nextflow run . -profile test_base,test_sc_multi,singularity
+
+# Spatial: test Visium from FASTQ input
+nextflow run . -profile test_base,test_visium,singularity
+
+# Custom chemistry: test from demultiplexed BAM
+nextflow run . -profile test_base,test_custom,singularity
 ```
 
 The output files from the smoke tests are written to `.smoke_test/<profile>/output/`.
@@ -283,9 +293,9 @@ The `--bam_only` flag stops the pipeline after genome alignment, saving BAM file
 
 ```bash
 nextflow run main.nf \
-  --input examples/samplesheet_test_fastq.csv \
-  --genome examples/GRCh38.primary_assembly.genome.chr9_1_1000000.fa \
-  --annotation examples/gencode.v49.primary_assembly.annotation.chr9_1_1000000.gtf \
+  --input examples/samplesheet_test_sc_fastq.csv \
+  --genome examples/GRCh38.primary_assembly.genome.chr21.fa.gz \
+  --annotation examples/gencode.v49.primary_assembly.annotation.chr21.gtf.gz \
   --bam_only true \
   -profile singularity,hpc
 ```
@@ -301,9 +311,9 @@ sample,path,chemistry,technology
 
 ```bash
 nextflow run main.nf \
-  --input examples/samplesheet_test_bam.csv \
-  --genome examples/GRCh38.primary_assembly.genome.chr9_1_1000000.fa \
-  --annotation examples/gencode.v49.primary_assembly.annotation.chr9_1_1000000.gtf \
+  --input examples/samplesheet_test_sc_bam.csv \
+  --genome examples/GRCh38.primary_assembly.genome.chr21.fa.gz \
+  --annotation examples/gencode.v49.primary_assembly.annotation.chr21.gtf.gz \
   -profile singularity,hpc
 ```
 
@@ -311,7 +321,7 @@ nextflow run main.nf \
 
 The `seurat_obj.rds` output contains PCA embeddings and cluster assignments but does not include a UMAP. The examples below show how to compute UMAP and visualise clusters in R.
 
-> **Note:** These examples use output generated from the smoke tests (`test_fastq` for single sample, `test_multi` for multiple samples), which are not representative of real datasets.
+> **Note:** These examples use output generated from the smoke tests (`test_sc_fastq` for single sample, `test_sc_multi` for multiple samples), which are not representative of real datasets.
 
 *Single sample*
 ```r

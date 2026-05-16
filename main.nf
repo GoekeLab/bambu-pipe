@@ -2,6 +2,8 @@
 
 nextflow.enable.dsl=2
 
+include { DECOMPRESS as DECOMPRESS_GENOME }     from './modules/decompress.nf'
+include { DECOMPRESS as DECOMPRESS_ANNOTATION } from './modules/decompress.nf'
 include { PREPARE_INPUT_STANDARD } from './subworkflows/prepare_input_standard.nf'
 include { PREPROCESS_FASTQ } from './modules/preprocess_fastq.nf'
 include { ALIGNMENT } from './subworkflows/alignment.nf'
@@ -17,8 +19,11 @@ workflow {
     def ndr = params.ndr ?: 'NULL'
 
     // load reference files
-    ch_genome =  channel.value(file(params.genome, checkIfExists: true))
-	ch_annotation =  channel.value(file(params.annotation, checkIfExists: true))
+    ch_genome     = channel.value(file(params.genome,     checkIfExists: true))
+    ch_annotation = channel.value(file(params.annotation, checkIfExists: true))
+
+    ch_genome     = params.genome.endsWith('.gz')     ? DECOMPRESS_GENOME(ch_genome).file         : ch_genome
+    ch_annotation = params.annotation.endsWith('.gz') ? DECOMPRESS_ANNOTATION(ch_annotation).file : ch_annotation
 
     // load config files
     ch_barcode_coordinate_config = file("${projectDir}/assets/10x_config/barcode_coordinate_config.csv", checkIfExists: true)
