@@ -1,0 +1,28 @@
+name: Smoke Tests
+
+on:
+  push:
+    branches:
+      - main
+      - devel
+
+jobs:
+  smoke_test:
+    name: "${{ matrix.profile }} (NF ${{ matrix.nextflow_version }})"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        nextflow_version: ["25.04.0", "latest-stable"]
+        profile:
+          - test_sc_fastq
+          - test_sc_bam
+          - test_sc_multi
+          - test_visium
+          - test_custom
+    steps:
+      - uses: actions/checkout@v4
+      - uses: nf-core/setup-nextflow@v2
+        with:
+          version: ${{ matrix.nextflow_version }}
+      - name: Run ${{ matrix.profile }}
+        run: nextflow run . -profile test_base,${{ matrix.profile }},docker
