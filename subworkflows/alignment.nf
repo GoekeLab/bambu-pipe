@@ -20,9 +20,8 @@ workflow ALIGNMENT {
     PAFTOOLS_GFF2BED(ch_annotation.combine(ch_gate).map { a, _gate -> a })
 
     // Minimap alignment
-    MINIMAP_ALIGNMENT(ch_unaligned_fastq, MINIMAP_BUILD_INDEX.out.index.first(), PAFTOOLS_GFF2BED.out.first())
+    MINIMAP_ALIGNMENT(ch_unaligned_fastq, MINIMAP_BUILD_INDEX.out.index.first(), PAFTOOLS_GFF2BED.out.bed.first())
 
     emit:
     bam = MINIMAP_ALIGNMENT.out.bam
-    versions = MINIMAP_BUILD_INDEX.out.versions.mix(MINIMAP_ALIGNMENT.out.versions.first())
 }

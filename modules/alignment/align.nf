@@ -13,7 +13,7 @@ process MINIMAP_ALIGNMENT{
     output:
     tuple val(sample), path("${sample}_demultiplexed.bam"), val(meta), emit: bam
     path("${sample}_demultiplexed.bam.bai")
-    path "versions.yml", emit: versions
+    path "versions.yml", topic: 'versions'
 
     script:
     """
@@ -29,6 +29,7 @@ process MINIMAP_ALIGNMENT{
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
+        minimap2: \$(minimap2 --version 2>&1)
         samtools: \$(samtools --version 2>&1 | head -1)
     END_VERSIONS
     """

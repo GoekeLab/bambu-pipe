@@ -12,7 +12,7 @@ process SEURAT_SINGLE_SAMPLE {
     output:
     path ('clusters.rds'), emit: clusters
     path ('seurat_obj.rds'), emit: seurat_obj
-    path "versions.yml", emit: versions
+    path "versions.yml", topic: 'versions'
 
     script:
     """
@@ -42,6 +42,12 @@ process SEURAT_SINGLE_SAMPLE {
 
     saveRDS(cellMix, "cell_mix.rds")
     saveRDS(clusters, "clusters.rds")
-    writeLines(c('"${task.process}":', paste0('    seurat: ', as.character(packageVersion("Seurat")))), "versions.yml")
+    writeLines(c(
+        '"${task.process}":',
+        paste0('    R: ',                   R.Version()\$version.string),
+        paste0('    seurat: ',              as.character(packageVersion("Seurat"))),
+        paste0('    IRanges: ',             as.character(packageVersion("IRanges"))),
+        paste0('    SummarizedExperiment: ', as.character(packageVersion("SummarizedExperiment")))
+    ), "versions.yml")
     """
 }
