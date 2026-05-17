@@ -126,7 +126,7 @@ To configure the executor and container, pass profile types via the `-profile` a
 ### **Parameters**
 
 **Mandatory**
-- `--input` [string]: Path to the samplesheet .csv file 
+- `--input` [string]: Path to the samplesheet `.csv` file 
 - `--genome` [string]: Path to the reference genome `.fa`, `.fasta`, or `.fa.gz` file 
 - `--annotation` [string]: Path to the reference annotation `.gtf`, `.gff`, `.gtf.gz`, or `.gff.gz` file 
 
@@ -225,7 +225,7 @@ The pipeline applies the same processing steps to both single-cell and spatial s
 
 For `visium-v*` samples, `colData` contains the spatial barcode and the corresponding X and Y spatial coordinates. 
 
-| Barcode            | X coordinate | Y coordinate| 
+| barcode            | x_coordinate | y_coordinate | 
 |:---|:---|:---|
 | AAACAACGAATAGTTC | 17 | 1 |
 | AAACAAGTATCTCCCA  | 103 | 51 |
