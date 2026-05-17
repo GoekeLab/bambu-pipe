@@ -34,7 +34,7 @@ This pipeline performs context-aware transcript discovery and quantification fro
 
 ### **Installation** 
 Install the following dependencies before running the pipeline:
-- [Nextflow](https://www.nextflow.io/docs/latest/install.html) ≥ 25.04
+- [Nextflow](https://www.nextflow.io/docs/latest/install.html) ≥ 25.04.0
 - [Docker](https://docs.docker.com/engine/install/ubuntu/) (or [Singularity](https://docs.sylabs.io/guides/3.0/user-guide/installation.html) if you do not have user permissions for Docker). 
 
 ### **General Usage** 
@@ -145,14 +145,15 @@ To configure the executor and container, pass profile types via the `-profile` a
 - `--resolution` [float, default: 0.8]: Seurat clustering resolution
 
 ### **Output**
-All outputs from the pipeline are written to the directory specified by the `--output_dir` parameter. The pipeline produces per-sample alignment files and the combined transcript discovery and quantification results. The examples below show the output directory structure for both single and multi-sample runs:
+All outputs from the pipeline are written to the directory specified by the `--output_dir` parameter. The pipeline produces per-sample alignment files and the combined transcript discovery and quantification results. 
 
-*Output Structure (Single Sample)*
+*Output Structure*
 ```
 output/
 ├── bam/                                
-│   ├── sample1_demultiplexed.bam
-│   └── sample1_demultiplexed.bam.bai
+│   ├── <sample>_demultiplexed.bam
+│   └── <sample>_demultiplexed.bam.bai
+│    # (one pair per sample for multi-sample runs)  
 │
 ├── extended_annotations.gtf
 ├── se_unique_counts.rds
@@ -166,29 +167,11 @@ output/
 ├── se_transcript_counts_clusters.rds
 ├── se_gene_counts_clusters.rds
 │
-└── software_versions.yml
-```
-
-*Output Structure (Multiple Samples)*
-```
-output/
-├── bam/                                
-│   ├── sample1_demultiplexed.bam
-│   ├── sample1_demultiplexed.bam.bai
-│   ├── sample2_demultiplexed.bam
-│   └── sample2_demultiplexed.bam.bai
-│
-├── extended_annotations.gtf
-├── se_unique_counts.rds
-├── se_gene_counts.rds
-│
-│   # single-cell EM:
-├── se_transcript_counts_singlecell.rds
-│
-│   # clustered EM:
-├── seurat_obj.rds
-├── se_transcript_counts_clusters.rds
-├── se_gene_counts_clusters.rds
+├── pipeline_info/
+│   ├── execution_timeline.html
+│   ├── execution_report.html
+│   ├── execution_trace.txt
+│   └── pipeline_dag.svg
 │
 └── software_versions.yml
 ```
@@ -206,6 +189,10 @@ output/
 | se_transcript_counts_clusters.rds | A RangedSummarizedExperiment object containing cluster-level transcript counts after EM quantification. Columns follow the `clusterId` naming convention for single-sample runs, and `sampleName_clusterId` for multi-sample runs. Only produced when `--quantification_mode` is set to `EM_clusters`.
 | se_gene_counts_clusters.rds | A RangedSummarizedExperiment object containing cluster-level gene counts. Columns follow the `clusterId` naming convention for single-sample runs, and `sampleName_clusterId` for multi-sample runs. Only produced when `--quantification_mode` is set to `EM_clusters`.
 | software_versions.yml | A YAML file listing the versions of all software tools used during the pipeline run.
+| execution_timeline.html | Pipeline execution timeline. See [Nextflow docs](https://www.nextflow.io/docs/latest/tracing.html#timeline-report).
+| execution_report.html | Resource and runtime report for the pipeline run. See [Nextflow docs](https://www.nextflow.io/docs/latest/tracing.html).
+| execution_trace.txt | Per-process execution trace. See [Nextflow docs](https://www.nextflow.io/docs/latest/tracing.html#trace-report).
+| pipeline_dag.svg | Workflow DAG diagram. See [Nextflow docs](https://www.nextflow.io/docs/latest/tracing.html#dag-visualisation).
 
 **Count Matrices**
 
