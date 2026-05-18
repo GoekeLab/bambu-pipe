@@ -13,6 +13,21 @@ include { BAMBU_TRANSCRIPT_DISCOVERY } from './modules/bambu/transcript_discover
 include { CLUSTERING } from './subworkflows/clustering.nf'
 include { BAMBU_EM } from './modules/bambu/EM_quant.nf'
 
+params {
+    input: Path
+    genome: Path
+    annotation: Path
+    output_dir: Path
+    chemistry: String?
+    technology: String?
+    bam_only: Boolean
+    qscore_filtering: Boolean
+    ndr: Float?
+    deduplicate_umis: Boolean
+    quantification_mode: String
+    resolution: Float
+}
+
 workflow {
     Validation.validateParams(params, workflow)
 
