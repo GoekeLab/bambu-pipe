@@ -41,4 +41,4 @@ jobs:
         run: |
           nextflow run . -profile test_base,${{ matrix.profile }},docker \
             ${{ matrix.quantification_mode && format('--quantification_mode {0}', matrix.quantification_mode) || '' }} \
-            ${{ matrix.bam_only && '--bam_only true' || '' }}
+            ${{ matrix.bam_only && '--bam_only' || '' }}
