@@ -8,7 +8,7 @@ on:
 
 jobs:
   smoke_test:
-    name: "${{ matrix.profile }} (NF ${{ matrix.nextflow_version }})"
+    name: "${{ matrix.profile }} (NF ${{ matrix.nextflow_version }})${{ matrix.quantification_mode && format(' [{0}]', matrix.quantification_mode) || '' }}${{ matrix.bam_only && ' [bam_only]' || '' }}"
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -19,10 +19,26 @@ jobs:
           - test_sc_multi
           - test_visium
           - test_custom
+        include:
+          - nextflow_version: "latest-stable"
+            profile: test_sc_fastq
+            quantification_mode: EM
+          - nextflow_version: "latest-stable"
+            profile: test_sc_multi
+            quantification_mode: EM
+          - nextflow_version: "latest-stable"
+            profile: test_sc_fastq
+            quantification_mode: no_quant
+          - nextflow_version: "latest-stable"
+            profile: test_sc_fastq
+            bam_only: true
     steps:
       - uses: actions/checkout@v4
       - uses: nf-core/setup-nextflow@v2
         with:
           version: ${{ matrix.nextflow_version }}
       - name: Run ${{ matrix.profile }}
-        run: nextflow run . -profile test_base,${{ matrix.profile }},docker
+        run: |
+          nextflow run . -profile test_base,${{ matrix.profile }},docker \
+            ${{ matrix.quantification_mode && format('--quantification_mode {0}', matrix.quantification_mode) || '' }} \
+            ${{ matrix.bam_only && '--bam_only true' || '' }}

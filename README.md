@@ -83,6 +83,7 @@ sample,path,chemistry,technology
 ```csv
 sample,path,chemistry,technology
 10x5v2_ONT_example,examples/10x5v2_ONT_example.fastq.gz,10x5v2,ONT
+10x5v2_PacBio_example,examples/10x5v2_PacBio_example.fastq.gz,10x5v2,PacBio
 10x5v3_ONT_example,examples/10x5v3_ONT_example_demultiplexed.bam,10x5v3,ONT
 ```
 
@@ -238,7 +239,7 @@ Example data and pre-configured profiles are provided in `examples/` to run the 
 |---|---|
 | `test_sc_fastq` | Single-cell, single-sample ONT run from raw reads |
 | `test_sc_bam` | Single-cell, single-sample ONT run from demultiplexed BAM |
-| `test_sc_multi` | Single-cell, multi-sample ONT run across two chemistries (10x5v2 FASTQ + 10x5v3 BAM) |
+| `test_sc_multi` | Single-cell, multiple-sample run with different chemistries and technologies |
 | `test_visium` | Spatial (Visium), single-sample ONT run from raw reads |
 | `test_custom` | Custom chemistry, single-sample ONT run from demultiplexed BAM |
 
