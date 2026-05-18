@@ -12,26 +12,24 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        nextflow_version: ["26.04.0", "latest-stable"]
-        profile:
-          - test_sc_fastq
-          - test_sc_bam
-          - test_sc_multi
-          - test_visium
-          - test_custom
         include:
-          - nextflow_version: "latest-stable"
-            profile: test_sc_fastq
-            quantification_mode: EM
-          - nextflow_version: "latest-stable"
-            profile: test_sc_multi
-            quantification_mode: EM
-          - nextflow_version: "latest-stable"
-            profile: test_sc_fastq
-            quantification_mode: no_quant
-          - nextflow_version: "latest-stable"
-            profile: test_sc_fastq
-            bam_only: true
+          # Nextflow 26.04.0 - all profiles
+          - {nextflow_version: "26.04.0", profile: test_sc_fastq}
+          - {nextflow_version: "26.04.0", profile: test_sc_bam}
+          - {nextflow_version: "26.04.0", profile: test_sc_multi}
+          - {nextflow_version: "26.04.0", profile: test_visium}
+          - {nextflow_version: "26.04.0", profile: test_custom}
+          # latest-stable - all profiles (default EM_clusters)
+          - {nextflow_version: "latest-stable", profile: test_sc_fastq}
+          - {nextflow_version: "latest-stable", profile: test_sc_bam}
+          - {nextflow_version: "latest-stable", profile: test_sc_multi}
+          - {nextflow_version: "latest-stable", profile: test_visium}
+          - {nextflow_version: "latest-stable", profile: test_custom}
+          # latest-stable - extra parameter variants
+          - {nextflow_version: "latest-stable", profile: test_sc_fastq, quantification_mode: EM}
+          - {nextflow_version: "latest-stable", profile: test_sc_multi, quantification_mode: EM}
+          - {nextflow_version: "latest-stable", profile: test_sc_fastq, quantification_mode: no_quant}
+          - {nextflow_version: "latest-stable", profile: test_sc_fastq, bam_only: true}
     steps:
       - uses: actions/checkout@v4
       - uses: nf-core/setup-nextflow@v2
