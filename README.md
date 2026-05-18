@@ -34,7 +34,7 @@ This pipeline performs context-aware transcript discovery and quantification fro
 
 ### **Installation** 
 Install the following dependencies before running the pipeline:
-- [Nextflow](https://www.nextflow.io/docs/latest/install.html) ≥ 25.04.0
+- [Nextflow](https://www.nextflow.io/docs/latest/install.html) ≥ 26.04.0
 - [Docker](https://docs.docker.com/engine/install/ubuntu/) (or [Singularity](https://docs.sylabs.io/guides/3.0/user-guide/installation.html) if you do not have user permissions for Docker). 
 
 ### **General Usage** 
@@ -44,9 +44,6 @@ To run the pipeline, you must provide a samplesheet, reference genome, and refer
 
 Use the command below to run the pipeline on the test data provided in `examples/`
 ``` 
-# Required for Nextflow < 26.04
-export NXF_SYNTAX_PARSER=v2
-
 nextflow run main.nf \
   --input examples/samplesheet_test_sc_fastq.csv \
   --genome examples/GRCh38.primary_assembly.genome.chr21.fa.gz \
@@ -247,9 +244,6 @@ Example data and pre-configured profiles are provided in `examples/` to run the 
 | `test_custom` | Custom chemistry, single-sample ONT run from demultiplexed BAM |
 
 ```bash
-# Required for Nextflow < 26.04
-export NXF_SYNTAX_PARSER=v2
-
 # Single-cell: test from FASTQ input
 nextflow run . -profile test_base,test_sc_fastq,singularity
 
@@ -286,9 +280,6 @@ custom_example,examples/custom_example.bam,my_custom_chemistry,ONT
 The `--bam_only` flag stops the pipeline after genome alignment, saving BAM files to `output/bam/`. This is useful when you want to inspect the aligned reads or run downstream steps separately.
 
 ```bash
-# Required for Nextflow < 26.04
-export NXF_SYNTAX_PARSER=v2
-
 nextflow run main.nf \
   --input examples/samplesheet_test_sc_fastq.csv \
   --genome examples/GRCh38.primary_assembly.genome.chr21.fa.gz \
@@ -307,9 +298,6 @@ sample,path,chemistry,technology
 ```
 
 ```bash
-# Required for Nextflow < 26.04
-export NXF_SYNTAX_PARSER=v2
-
 nextflow run main.nf \
   --input examples/samplesheet_test_sc_bam.csv \
   --genome examples/GRCh38.primary_assembly.genome.chr21.fa.gz \
