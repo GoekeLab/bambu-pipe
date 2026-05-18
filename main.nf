@@ -32,11 +32,18 @@ workflow {
     def ndr = params.ndr ?: 'NULL'
 
     // load reference files
-    ch_genome     = channel.value(file(params.genome,     checkIfExists: true))
-    ch_annotation = channel.value(file(params.annotation, checkIfExists: true))
+    ch_genome     = channel.value(params.genome)
+    ch_annotation = channel.value(params.annotation)
 
-    ch_genome     = params.genome.toString().endsWith('.gz')     ? DECOMPRESS_GENOME(ch_genome).file         : ch_genome
-    ch_annotation = params.annotation.toString().endsWith('.gz') ? DECOMPRESS_ANNOTATION(ch_annotation).file : ch_annotation
+    if (params.genome.extension == 'gz') {
+        DECOMPRESS_GENOME(ch_genome)
+        ch_genome = DECOMPRESS_GENOME.out
+    }
+
+    if (params.annotation.extension == 'gz') {
+        DECOMPRESS_ANNOTATION(ch_annotation)
+        ch_annotation = DECOMPRESS_ANNOTATION.out
+    }
 
     // load config files
     ch_barcode_coordinate_config = file("${projectDir}/assets/10x_config/barcode_coordinate_config.csv", checkIfExists: true)
@@ -44,13 +51,7 @@ workflow {
     ch_flank_seq_config = file("${projectDir}/assets/10x_config/flank_seq_config.csv", checkIfExists: true)
 
     // parsing samplesheet csv file
-    ch_input = channel.fromPath(params.input, checkIfExists: true)
-    .map { file ->
-        if (file.extension != "csv") {
-            error "Invalid samplesheet. Must be a CSV file."
-        }
-        return file
-    }
+    ch_input = channel.of(params.input)
 
     ch_standard  = ch_input.splitCsv(header:true, sep:',')
     ch_n_samples = ch_standard.count()

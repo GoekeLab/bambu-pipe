@@ -5,7 +5,7 @@ process DECOMPRESS {
     path(compressed)
 
     output:
-    path("${compressed.baseName}"), emit: file
+    path("${compressed.baseName}")
 
     script:
     """

@@ -5,6 +5,19 @@ class Validation {
         if (!(workflow.containerEngine in ['docker', 'singularity']))
             throw new Exception("A container engine is required — please run with '-profile docker' or '-profile singularity'")
 
+        // File existence checks
+        if (!params.input.exists())
+            throw new Exception("params.input '${params.input}' does not exist")
+
+        if (params.input.extension != 'csv')
+            throw new Exception("params.input '${params.input}' must be a CSV file")
+
+        if (!params.genome.exists())
+            throw new Exception("params.genome '${params.genome}' does not exist")
+
+        if (!params.annotation.exists())
+            throw new Exception("params.annotation '${params.annotation}' does not exist")
+
         // Enum checks
         if (!params.valid_quantification_modes.contains(params.quantification_mode))
             throw new Exception("Invalid params.quantification_mode '${params.quantification_mode}' — must be one of: ${params.valid_quantification_modes.join(', ')}")
