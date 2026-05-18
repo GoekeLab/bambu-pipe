@@ -39,6 +39,7 @@ jobs:
           version: ${{ matrix.nextflow_version }}
       - name: Run ${{ matrix.profile }}
         run: |
+          export NXF_SYNTAX_PARSER=v2
           nextflow run . -profile test_base,${{ matrix.profile }},docker \
             ${{ matrix.quantification_mode && format('--quantification_mode {0}', matrix.quantification_mode) || '' }} \
             ${{ matrix.bam_only && '--bam_only' || '' }}
