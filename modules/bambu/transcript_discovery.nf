@@ -8,19 +8,19 @@ process BAMBU_TRANSCRIPT_DISCOVERY{
     label "medium"
 
 	input:
-    tuple val(sample), path(rds_files), val(meta), path(spatial_metadata_files, stageAs: '?/*') // stageAs prevents filename collisions when multiple samples share the same metadata filename
+    tuple val(sample), path(rds_files), val(meta), path(spatial_metadata_files)
 	path(genome)
 	path(bambu_annotation)
     val(ndr)
     
 	output:
     path ('quant_data.rds'), emit: quant_data
-    path ('gene_counts.rds'), emit: gene_counts
     path ('se_unique_counts.rds'), emit: se_unique_counts
     path ('se_gene_counts.rds'), emit: se_gene_counts
 	path ('extended_annotations.rds'), emit: extended_annotations
     path ('extended_annotations.gtf'), emit: extended_annotations_gtf
     path ('sample_names.rds'), emit: sample_names
+    path "versions.yml", topic: 'versions'
 
 	script:
 	""" 
@@ -29,12 +29,10 @@ process BAMBU_TRANSCRIPT_DISCOVERY{
 
     annotation <- readRDS("$bambu_annotation")
     readClassFile <- strsplit("${rds_files.join(',')}", ",")[[1]]
+    sampleNames <- strsplit("${sample.join(',')}", ",")[[1]]
     sampleData <- strsplit("${spatial_metadata_files.join(',')}", ",")[[1]]
-    
-    # Set sampleData to NA/NULL for non-spatial samples
-    containsVisiumStandard <- grepl("visium-v", sampleData)
-    sampleData[!containsVisiumStandard] <- NA
-    sampleData <- if (all(is.na(sampleData))) NULL else sampleData
+    chemistry  <- setNames(strsplit("${meta.collect { m -> m.chemistry }.join(',')}", ",")[[1]], sampleNames)
+    technology <- setNames(strsplit("${meta.collect { m -> m.technology }.join(',')}", ",")[[1]], sampleNames)
 
     # Transcript discovery
     extendedAnno <- bambu.singlecell(reads = readClassFile, annotations = annotation, genome = "$genome", ncore = $task.cpus, 
@@ -43,23 +41,24 @@ process BAMBU_TRANSCRIPT_DISCOVERY{
     writeToGTF(extendedAnno, "extended_annotations.gtf")
 
     # Quantification without EM
+    sampleData <- if (any(startsWith(chemistry, "visium-v"))) sampleData else NULL # Add spatial metadata for visium samples
     quantData <- bambu.singlecell(reads = readClassFile, annotations = extendedAnno, genome = "$genome", ncore = $task.cpus, 
     discovery = FALSE, quant = FALSE, verbose = FALSE, opt.em = list(degradationBias = FALSE), assignDist = TRUE, sampleData = sampleData)
     saveRDS(quantData, "quant_data.rds")
 
-    # Extract sampleNames from quantData (required for Seurat clustering)
-    saveRDS(unname(sapply(quantData, function(qd) bambu:::getSampleData(qd)\$sampleName[1])), "sample_names.rds") #TODO: Find a more elegant way to extract sampleNames 
-
     # Generate unique counts SE from quantData
     seDiscovery <- generateUniqueCountsSEFromQuantData(quantData, extendedAnno)
+    colData(seDiscovery)\$chemistry  <- unname(chemistry[colData(seDiscovery)\$sampleName]) # Add chemistry into colData (for subsequent batch correction)
+    colData(seDiscovery)\$technology <- unname(technology[colData(seDiscovery)\$sampleName]) # Add technology into colData (for subsequent batch correction)
     saveRDS(seDiscovery, "se_unique_counts.rds")
 
     # Generate gene counts SE from unique counts SE
     seDiscovery.gene <- transcriptToGeneExpression(seDiscovery)
     saveRDS(seDiscovery.gene, "se_gene_counts.rds")
 
-    # Extract gene count matrix for downstream process
-    geneCounts <- assays(seDiscovery.gene)\$counts
-    saveRDS(geneCounts, "gene_counts.rds")
+    # Save sampleNames (required for multi-sample Seurat clustering)
+    saveRDS(sampleNames, "sample_names.rds")
+    
+    writeLines(c('"${task.process}":', paste0('    R: ', R.Version()\$version.string), paste0('    bambu: ', as.character(packageVersion("bambu")))), "versions.yml")
 	"""
 }

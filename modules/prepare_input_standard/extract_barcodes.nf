@@ -8,7 +8,6 @@ process EXTRACT_10X_BARCODES {
 
     output:
     tuple val(chemistry), path("${chemistry}_barcode.txt"), emit: barcodes
-    path "versions.yml", emit: versions
 
     script:
     """
@@ -21,10 +20,5 @@ process EXTRACT_10X_BARCODES {
     else
         cp $params.cellranger_dir/\$bc_filename ./${chemistry}_barcode.txt
     fi
-
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        spaceranger: \$(spaceranger --version 2>&1 | head -1)
-    END_VERSIONS
     """
 }

@@ -8,10 +8,16 @@ process PAFTOOLS_GFF2BED {
     path(gtf)
 
     output:
-    path('anno.bed')
+    path('anno.bed'), emit: bed
+    path "versions.yml", topic: 'versions'
 
     script:
     """
     paftools.js gff2bed $gtf > anno.bed
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        minimap2: \$(minimap2 --version 2>&1)
+    END_VERSIONS
     """
 }

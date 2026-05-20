@@ -9,7 +9,7 @@ process MINIMAP_BUILD_INDEX{
 
     output:
     path('ref.mmi'), emit: index
-    path "versions.yml", emit: versions
+    path "versions.yml", topic: 'versions'
 
     script:
     """

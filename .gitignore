@@ -1,4 +1,5 @@
 .claude/
+CLAUDE.md
 .smoke_test/
 .nextflow/
 .nextflow.log*

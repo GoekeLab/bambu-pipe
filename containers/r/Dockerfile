@@ -13,6 +13,7 @@ RUN micromamba install -y -n base -c conda-forge -c bioconda \
     r-biocmanager=1.30.27 \
     bioconductor-bambu=3.12.1 \
     r-seurat=5.4.0 \
+    r-harmony=2.0.2 \
     gxx=15.2.0 \
     && micromamba clean --all --yes
 

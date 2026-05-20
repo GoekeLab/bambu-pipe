@@ -4,6 +4,16 @@ This file contains all notable changes to Bambu-Pipe.
 
 ---
 
+## [v0.9.1] - 2026-05-20
+
+### Added
+- Harmony batch correction for multi-sample Seurat clustering
+- Processing of CB/UB tagged custom BAM files
+- GitHub Actions workflow to run smoke test on push and pull request to `main` and `devel` branches
+
+### Changed
+- Upgraded pipeline to support Nextflow version `26.04.0` and above
+
 ## [v0.9-beta] - 2026-05-11
 
 ### Added
@@ -25,7 +35,7 @@ This file contains all notable changes to Bambu-Pipe.
 - `quantification_mode` parameter to control quantification strategy (`no_quant`, `EM`, `EM_clusters`)
 - Seurat clustering as a dedicated process (`SEURAT_CLUSTERING`) for cluster-based EM quantification
 - Joint clustering across all samples on a combined gene counts matrix (previously per-sample)
-- Cluster output restructured to an ordered list of `CompressedCharacterList`s, one per sample in `quantData` order (previously a flat single CCL mixing all samples)
+- Cluster output restructured to an ordered list of `CompressedCharacterList`, one per sample in `quantData` order (previously a flat single CCL mixing all samples)
 - `SEURAT_CLUSTERING` now takes gene counts matrix and sample names as inputs instead of the full `quantData` object
 - `clusterCells` helper inlined into the process (previously sourced from `bin/utilityFunctions.R`)
 - `early_stop_stage` parameter to terminate the pipeline after BAM or RDS generation
