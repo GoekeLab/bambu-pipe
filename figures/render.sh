@@ -3,5 +3,5 @@ nf-metro render metro.mmd \
     --format svg \
     --theme light \
     -o metro.svg \
-    --x-spacing 70 \
+    --x-spacing 80 \
     --logo logo.png
