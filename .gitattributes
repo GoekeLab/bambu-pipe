@@ -4,4 +4,6 @@
 *.groovy   linguist-detectable=false
 *.py       linguist-detectable=false
 *.bash     linguist-detectable=false
+*.sh       linguist-detectable=false
 Dockerfile linguist-detectable=false
+*.mmd      linguist-detectable=false

@@ -14,6 +14,8 @@
 
 
 ### **Overview**
+
+![Pipeline Overview](figures/metro.svg)
 This pipeline performs context-aware transcript discovery and quantification from long-read single-cell and spatial transcriptomics data. The workflow is divided into three stages:
 
 **Preprocessing**

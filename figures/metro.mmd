@@ -1,0 +1,99 @@
+%%metro title: Bambu-Pipe
+%%metro style: light
+%%metro file: samplesheet_in | CSV | Samplesheet
+%%metro file: ref_genome | FASTA | Reference Genome
+%%metro file: ref_annotation | GTF | Reference Annotation
+%%metro files: in_fastq | FASTQ 
+%%metro files: in_bam | BAM 
+%%metro file: bam_out | BAM | Output BAM
+%%metro file: se_gene_counts | SE | Gene Counts
+%%metro file: se_unique_counts | SE | Unique Counts
+%%metro file: ext_annotation | GTF | ExtendedAnnotations
+%%metro file: transcript_counts | SE | Transcript Counts
+%%metro line: fastq | FASTQ samples | #f5a623
+%%metro line: bam | Pre-aligned BAM | #0570b0
+%%metro line: em_single | Pseudobulk quantification (single sample) | #9b59b6 | dashed
+%%metro line: em_multi | Pseudobulk quantification (multi-sample) | #6c3483 | dashed
+%%metro line: sc | Single cell quantification | #ff0000 | dashed
+%%metro legend: bl
+%%metro grid: inputs | 0,1
+%%metro grid: preprocessing | 1,1
+%%metro grid: alignment | 2,1
+%%metro grid: bambu | 3,1
+%%metro grid: quantification | 4,1
+
+graph LR
+    subgraph inputs [Inputs]
+        %%metro exit: right | fastq, bam
+        samplesheet_in[ ]
+        ref_genome[ ]
+        ref_annotation[ ]
+        in_fastq[ ]
+        in_bam[ ]
+    end
+
+    subgraph preprocessing [FASTQ Preprocessing]
+        %%metro entry: left | fastq
+        %%metro exit: right | fastq
+        chopper_filter[Chopper]
+        flexiplex[Flexiplex]
+        cutadapt[Cutadapt]
+        chopper_filter -->|fastq| flexiplex
+        flexiplex -->|fastq| cutadapt
+    end
+
+    subgraph alignment [Alignment]
+        %%metro entry: left | fastq
+        %%metro exit: right | fastq
+        minimap_align[Minimap2]
+        bam_out[ ]
+        minimap_align -->|fastq| bam_out
+    end
+
+    subgraph bambu [Transcript Discovery]
+        %%metro entry: left | fastq, bam
+        %%metro exit: right | sc, em_single, em_multi
+        transcript_discovery[Bambu]
+        se_gene_counts[ ]
+        se_unique_counts[ ]
+        ext_annotation[ ]
+        transcript_discovery -->|fastq,bam| ext_annotation
+        ext_annotation -->|fastq,bam| se_unique_counts
+        se_unique_counts -->|fastq,bam| se_gene_counts
+    end
+
+    subgraph quantification [Transcript Quantification]
+        %%metro entry: left | sc, em_single, em_multi
+        seurat_single[Seurat]
+        seurat_multi[Seurat + Harmony]
+        _cluster_out[ ]
+        bambu_em[Bambu]
+        transcript_counts[ ]
+        seurat_single -->|em_single| _cluster_out
+        seurat_multi -->|em_multi| _cluster_out
+        _cluster_out -->|em_single,em_multi| bambu_em
+        bambu_em -->|sc,em_single,em_multi| transcript_counts
+    end
+
+    %% Inter-section edges
+    samplesheet_in -->|fastq| chopper_filter
+    samplesheet_in -->|bam| transcript_discovery
+
+    ref_genome -->|fastq| chopper_filter
+    ref_genome -->|bam| transcript_discovery
+
+    ref_annotation -->|fastq| chopper_filter
+    ref_annotation -->|bam| transcript_discovery
+
+    in_fastq -->|fastq| chopper_filter
+    in_bam -->|bam| transcript_discovery
+
+    cutadapt -->|fastq| minimap_align
+
+    %% Alignment to Bambu
+    bam_out -->|fastq| transcript_discovery
+
+    %% Bambu TD to quantification
+    transcript_discovery -->|em_single| seurat_single
+    transcript_discovery -->|em_multi| seurat_multi
+    transcript_discovery -->|sc| bambu_em
