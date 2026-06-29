@@ -159,16 +159,38 @@ output/
 │    # (one pair per sample for multi-sample runs)  
 │
 ├── extended_annotations.gtf
-├── se_unique_counts.rds
-├── se_gene_counts.rds
 │
-│   # single-cell EM:
-├── se_transcript_counts_singlecell.rds
+├── unique_counts/
+│   ├── se_unique_counts.rds
+│   ├── matrix.mtx.gz
+│   ├── barcodes.tsv.gz
+│   └── features.tsv.gz
 │
-│   # clustered EM:
+├── gene_counts/
+│   ├── se_gene_counts.rds
+│   ├── matrix.mtx.gz
+│   ├── barcodes.tsv.gz
+│   └── features.tsv.gz
+│
+│   # single-cell EM (--quantification_mode EM):
+├── transcript_counts_singlecell/
+│   ├── se_transcript_counts_singlecell.rds
+│   ├── matrix.mtx.gz
+│   ├── barcodes.tsv.gz
+│   └── features.tsv.gz
+│
+│   # clustered EM (--quantification_mode EM_clusters):
 ├── seurat_obj.rds
-├── se_transcript_counts_clusters.rds
-├── se_gene_counts_clusters.rds
+├── transcript_counts_clusters/
+│   ├── se_transcript_counts_clusters.rds
+│   ├── matrix.mtx.gz
+│   ├── barcodes.tsv.gz
+│   └── features.tsv.gz
+├── gene_counts_clusters/
+│   ├── se_gene_counts_clusters.rds
+│   ├── matrix.mtx.gz
+│   ├── barcodes.tsv.gz
+│   └── features.tsv.gz
 │
 ├── pipeline_info/
 │   ├── execution_timeline.html
@@ -182,20 +204,23 @@ output/
 **Description of the Output Files**
 | File | Description 
 |---|---
-| <sample_name>_demultiplexed.bam | BAM file containing demultiplexed, trimmed and aligned reads
-| <sample_name>_demultiplexed.bam.bai | BAM index for the corresponding BAM file
-| extended_annotations.gtf | A `.gtf` file containing the novel transcripts discovered by Bambu as well as the reference annotations provided by the user.
-| seurat_obj.rds | A [SeuratObject](https://satijalab.github.io/seurat-object/reference/Seurat-class.html) containing normalised counts, PCA embeddings, and cluster assignments. For multi-sample runs, also contains Harmony-integrated embeddings corrected for sequencing technology and capture chemistry. UMAP has not been computed. Only produced when `--quantification_mode` is set to `EM_clusters`.
-| se_unique_counts.rds | A [RangedSummarizedExperiment](https://www.rdocumentation.org/packages/SummarizedExperiment/versions/1.2.3/topics/RangedSummarizedExperiment-class) object containing transcript-level unique counts at single-cell resolution, produced prior to EM quantification. Columns follow the `sampleName_barcode` naming convention.
-| se_gene_counts.rds | A RangedSummarizedExperiment object containing gene-level counts at single-cell resolution. Columns follow the `sampleName_barcode` naming convention.
-| se_transcript_counts_singlecell.rds | A RangedSummarizedExperiment object containing per-cell transcript counts after EM quantification. Columns follow the `sampleName_barcode` naming convention. Only produced when `--quantification_mode` is set to `EM`.
-| se_transcript_counts_clusters.rds | A RangedSummarizedExperiment object containing cluster-level transcript counts after EM quantification. Columns follow the `clusterId` naming convention for single-sample runs, and `sampleName_clusterId` for multi-sample runs. Only produced when `--quantification_mode` is set to `EM_clusters`.
-| se_gene_counts_clusters.rds | A RangedSummarizedExperiment object containing cluster-level gene counts. Columns follow the `clusterId` naming convention for single-sample runs, and `sampleName_clusterId` for multi-sample runs. Only produced when `--quantification_mode` is set to `EM_clusters`.
-| software_versions.yml | A YAML file listing the versions of all software tools used during the pipeline run.
-| execution_timeline.html | Pipeline execution timeline. See [Nextflow docs](https://www.nextflow.io/docs/latest/tracing.html#timeline-report).
-| execution_report.html | Resource and runtime report for the pipeline run. See [Nextflow docs](https://www.nextflow.io/docs/latest/tracing.html).
-| execution_trace.txt | Per-process execution trace. See [Nextflow docs](https://www.nextflow.io/docs/latest/tracing.html#trace-report).
-| pipeline_dag.svg | Workflow DAG diagram. See [Nextflow docs](https://www.nextflow.io/docs/latest/tracing.html#dag-visualisation).
+| `<sample>_demultiplexed.bam` | BAM file containing demultiplexed, trimmed and aligned reads
+| `<sample>_demultiplexed.bam.bai` | BAM index for the corresponding BAM file
+| `extended_annotations.gtf` | A `.gtf` file containing the novel transcripts discovered by Bambu as well as the reference annotations provided by the user.
+| `seurat_obj.rds` | A [SeuratObject](https://satijalab.github.io/seurat-object/reference/Seurat-class.html) containing normalised counts, PCA embeddings, and cluster assignments. For multi-sample runs, also contains Harmony-integrated embeddings corrected for sequencing technology and capture chemistry. UMAP has not been computed. Only produced when `--quantification_mode` is set to `EM_clusters`.
+| `se_unique_counts.rds` | A [RangedSummarizedExperiment](https://www.rdocumentation.org/packages/SummarizedExperiment/versions/1.2.3/topics/RangedSummarizedExperiment-class) object containing transcript-level unique counts at single-cell resolution, produced prior to EM quantification. Columns follow the `sampleName_barcode` naming convention.
+| `se_gene_counts.rds` | A RangedSummarizedExperiment object containing gene-level counts at single-cell resolution. Columns follow the `sampleName_barcode` naming convention.
+| `se_transcript_counts_singlecell.rds` | A RangedSummarizedExperiment object containing per-cell transcript counts after EM quantification. Columns follow the `sampleName_barcode` naming convention. Only produced when `--quantification_mode` is set to `EM`.
+| `se_transcript_counts_clusters.rds` | A RangedSummarizedExperiment object containing cluster-level transcript counts after EM quantification. Columns follow the `clusterId` naming convention for single-sample runs, and `sampleName_clusterId` for multi-sample runs. Only produced when `--quantification_mode` is set to `EM_clusters`.
+| `se_gene_counts_clusters.rds` | A RangedSummarizedExperiment object containing cluster-level gene counts. Columns follow the `clusterId` naming convention for single-sample runs, and `sampleName_clusterId` for multi-sample runs. Only produced when `--quantification_mode` is set to `EM_clusters`.
+| `matrix.mtx.gz` | Gzip-compressed sparse count matrix in [Matrix Market Exchange](https://math.nist.gov/MatrixMarket/formats.html) format (features × barcodes).
+| `barcodes.tsv.gz` | Gzip-compressed list of cell barcodes (one per line) corresponding to the columns of `matrix.mtx.gz`. Barcodes follow the `sampleName_barcode` naming convention for multi-sample runs.
+| `features.tsv.gz` | Gzip-compressed three-column TSV corresponding to the rows of `matrix.mtx.gz`. Column 1 is the feature ID (transcript ID for transcript-level matrices, gene ID for gene-level matrices). Column 2 is the feature name (same as column 1). Column 3 is the feature type (`Transcript Expression` for transcript-level matrices, `Gene Expression` for gene-level matrices).
+| `software_versions.yml` | A YAML file listing the versions of all software tools used during the pipeline run.
+| `execution_timeline.html` | Pipeline execution timeline. See [Nextflow docs](https://www.nextflow.io/docs/latest/tracing.html#timeline-report).
+| `execution_report.html` | Resource and runtime report for the pipeline run. See [Nextflow docs](https://www.nextflow.io/docs/latest/tracing.html).
+| `execution_trace.txt` | Per-process execution trace. See [Nextflow docs](https://www.nextflow.io/docs/latest/tracing.html#trace-report).
+| `pipeline_dag.svg` | Workflow DAG diagram. See [Nextflow docs](https://www.nextflow.io/docs/latest/tracing.html#dag-visualisation).
 
 **Count Matrices**
 

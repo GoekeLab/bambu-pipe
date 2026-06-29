@@ -1,6 +1,7 @@
-process BAMBU_TRANSCRIPT_DISCOVERY{ 
+process BAMBU_TRANSCRIPT_DISCOVERY{
     publishDir "$params.output_dir", mode: 'copy', pattern: 'extended_annotations.gtf'
-    publishDir "$params.output_dir", mode: 'copy', pattern: '{se_unique_counts,se_gene_counts}.rds'
+    publishDir "$params.output_dir", mode: 'copy', pattern: 'unique_counts'
+    publishDir "$params.output_dir", mode: 'copy', pattern: 'gene_counts'
     publishDir "$params.output_dir/intermediate_R", mode: 'copy', pattern: '*.rds', enabled: params.save_intermediates
     label "r"
     label "medium_cpu"
@@ -12,20 +13,23 @@ process BAMBU_TRANSCRIPT_DISCOVERY{
 	path(genome)
 	path(bambu_annotation)
     val(ndr)
-    
+
 	output:
     path ('quant_data.rds'), emit: quant_data
-    path ('se_unique_counts.rds'), emit: se_unique_counts
-    path ('se_gene_counts.rds'), emit: se_gene_counts
+    path ('unique_counts/se_unique_counts.rds')
+    path ('gene_counts/se_gene_counts.rds'), emit: se_gene_counts
 	path ('extended_annotations.rds'), emit: extended_annotations
-    path ('extended_annotations.gtf'), emit: extended_annotations_gtf
+    path ('extended_annotations.gtf')
     path ('sample_names.rds'), emit: sample_names
+    path ('unique_counts')
+    path ('gene_counts')
     path "versions.yml", topic: 'versions'
 
 	script:
-	""" 
+	"""
 	#!/usr/bin/env Rscript
     if ("$params.bambu_path" == "null") { library("bambu") } else { library("devtools"); load_all("$params.bambu_path") }
+    library(DropletUtils)
 
     annotation <- readRDS("$bambu_annotation")
     readClassFile <- strsplit("${rds_files.join(',')}", ",")[[1]]
@@ -35,14 +39,14 @@ process BAMBU_TRANSCRIPT_DISCOVERY{
     technology <- setNames(strsplit("${meta.collect { m -> m.technology }.join(',')}", ",")[[1]], sampleNames)
 
     # Transcript discovery
-    extendedAnno <- bambu.singlecell(reads = readClassFile, annotations = annotation, genome = "$genome", ncore = $task.cpus, 
+    extendedAnno <- bambu.singlecell(reads = readClassFile, annotations = annotation, genome = "$genome", ncore = $task.cpus,
     discovery = TRUE, quant = FALSE, verbose = FALSE, assignDist = FALSE, NDR = $ndr)
     saveRDS(extendedAnno, "extended_annotations.rds")
     writeToGTF(extendedAnno, "extended_annotations.gtf")
 
     # Quantification without EM
     sampleData <- if (any(startsWith(chemistry, "visium-v"))) sampleData else NULL # Add spatial metadata for visium samples
-    quantData <- bambu.singlecell(reads = readClassFile, annotations = extendedAnno, genome = "$genome", ncore = $task.cpus, 
+    quantData <- bambu.singlecell(reads = readClassFile, annotations = extendedAnno, genome = "$genome", ncore = $task.cpus,
     discovery = FALSE, quant = FALSE, verbose = FALSE, opt.em = list(degradationBias = FALSE), assignDist = TRUE, sampleData = sampleData)
     saveRDS(quantData, "quant_data.rds")
 
@@ -50,15 +54,17 @@ process BAMBU_TRANSCRIPT_DISCOVERY{
     seDiscovery <- generateUniqueCountsSEFromQuantData(quantData, extendedAnno)
     colData(seDiscovery)\$chemistry  <- unname(chemistry[colData(seDiscovery)\$sampleName]) # Add chemistry into colData (for subsequent batch correction)
     colData(seDiscovery)\$technology <- unname(technology[colData(seDiscovery)\$sampleName]) # Add technology into colData (for subsequent batch correction)
-    saveRDS(seDiscovery, "se_unique_counts.rds")
+    write10xCounts("unique_counts", assays(seDiscovery)\$counts, version = "3", gene.type = "Transcript Expression")
+    saveRDS(seDiscovery, "unique_counts/se_unique_counts.rds")
 
     # Generate gene counts SE from unique counts SE
     seDiscovery.gene <- transcriptToGeneExpression(seDiscovery)
-    saveRDS(seDiscovery.gene, "se_gene_counts.rds")
+    write10xCounts("gene_counts", assays(seDiscovery.gene)\$counts, version = "3")
+    saveRDS(seDiscovery.gene, "gene_counts/se_gene_counts.rds")
 
     # Save sampleNames (required for multi-sample Seurat clustering)
     saveRDS(sampleNames, "sample_names.rds")
-    
+
     writeLines(c('"${task.process}":', paste0('    R: ', R.Version()\$version.string), paste0('    bambu: ', as.character(packageVersion("bambu")))), "versions.yml")
 	"""
 }
