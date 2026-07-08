@@ -24,6 +24,7 @@ process BAMBU_EM{
     #!/usr/bin/env Rscript
     if ("$params.bambu_path" == "null") { library("bambu") } else { library("devtools"); load_all("$params.bambu_path") }
     library(DropletUtils)
+    source(Sys.which("save_counts.R"))
 
     extendedAnno <- readRDS("$extended_annotation")
     quantData    <- readRDS("$quant_data")
@@ -45,15 +46,12 @@ process BAMBU_EM{
     )
 
     if (is.null(clusters)) {
-        write10xCounts("transcript_counts_singlecell", assays(se)\$counts, version = "3", gene.type = "Transcript Expression")
-        saveRDS(se, "transcript_counts_singlecell/se_transcript_counts_singlecell.rds")
+        save_counts(se, "transcript_counts_singlecell", "Transcript Expression")
     } else {
-        write10xCounts("transcript_counts_clusters", assays(se)\$counts, version = "3", gene.type = "Transcript Expression")
-        saveRDS(se, "transcript_counts_clusters/se_transcript_counts_clusters.rds")
+        save_counts(se, "transcript_counts_clusters", "Transcript Expression")
 
         se_gene <- transcriptToGeneExpression(se)
-        write10xCounts("gene_counts_clusters", assays(se_gene)\$counts, version = "3")
-        saveRDS(se_gene, "gene_counts_clusters/se_gene_counts_clusters.rds")
+        save_counts(se_gene, "gene_counts_clusters")
     }
 
     writeLines(c('"${task.process}":', paste0('    R: ', R.Version()\$version.string), paste0('    bambu: ', as.character(packageVersion("bambu")))), "versions.yml")

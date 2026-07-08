@@ -162,33 +162,43 @@ output/
 │
 ├── unique_counts/
 │   ├── se_unique_counts.rds
-│   ├── matrix.mtx.gz
+│   ├── counts.mtx.gz
 │   ├── barcodes.tsv.gz
 │   └── features.tsv.gz
 │
 ├── gene_counts/
 │   ├── se_gene_counts.rds
-│   ├── matrix.mtx.gz
+│   ├── counts.mtx.gz
+│   ├── CPM.mtx.gz
 │   ├── barcodes.tsv.gz
 │   └── features.tsv.gz
 │
 │   # single-cell EM (--quantification_mode EM):
 ├── transcript_counts_singlecell/
 │   ├── se_transcript_counts_singlecell.rds
-│   ├── matrix.mtx.gz
+│   ├── counts.mtx.gz
+│   ├── CPM.mtx.gz
+│   ├── fullLengthCounts.mtx.gz
+│   ├── uniqueCounts.mtx.gz
 │   ├── barcodes.tsv.gz
 │   └── features.tsv.gz
 │
 │   # clustered EM (--quantification_mode EM_clusters):
 ├── seurat_obj.rds
+│
 ├── transcript_counts_clusters/
 │   ├── se_transcript_counts_clusters.rds
-│   ├── matrix.mtx.gz
+│   ├── counts.mtx.gz
+│   ├── CPM.mtx.gz
+│   ├── fullLengthCounts.mtx.gz
+│   ├── uniqueCounts.mtx.gz
 │   ├── barcodes.tsv.gz
 │   └── features.tsv.gz
+│
 ├── gene_counts_clusters/
 │   ├── se_gene_counts_clusters.rds
-│   ├── matrix.mtx.gz
+│   ├── counts.mtx.gz
+│   ├── CPM.mtx.gz
 │   ├── barcodes.tsv.gz
 │   └── features.tsv.gz
 │
@@ -213,9 +223,9 @@ output/
 | `se_transcript_counts_singlecell.rds` | A RangedSummarizedExperiment object containing per-cell transcript counts after EM quantification. Columns follow the `sampleName_barcode` naming convention. Only produced when `--quantification_mode` is set to `EM`.
 | `se_transcript_counts_clusters.rds` | A RangedSummarizedExperiment object containing cluster-level transcript counts after EM quantification. Columns follow the `clusterId` naming convention for single-sample runs, and `sampleName_clusterId` for multi-sample runs. Only produced when `--quantification_mode` is set to `EM_clusters`.
 | `se_gene_counts_clusters.rds` | A RangedSummarizedExperiment object containing cluster-level gene counts. Columns follow the `clusterId` naming convention for single-sample runs, and `sampleName_clusterId` for multi-sample runs. Only produced when `--quantification_mode` is set to `EM_clusters`.
-| `matrix.mtx.gz` | Gzip-compressed sparse count matrix in [Matrix Market Exchange](https://math.nist.gov/MatrixMarket/formats.html) format (features × barcodes).
-| `barcodes.tsv.gz` | Gzip-compressed list of cell barcodes (one per line) corresponding to the columns of `matrix.mtx.gz`. Barcodes follow the `sampleName_barcode` naming convention for multi-sample runs.
-| `features.tsv.gz` | Gzip-compressed three-column TSV corresponding to the rows of `matrix.mtx.gz`. Column 1 is the feature ID (transcript ID for transcript-level matrices, gene ID for gene-level matrices). Column 2 is the feature name (same as column 1). Column 3 is the feature type (`Transcript Expression` for transcript-level matrices, `Gene Expression` for gene-level matrices).
+| `<assay>.mtx.gz` | Gzip-compressed sparse count matrix in [Matrix Market Exchange](https://math.nist.gov/MatrixMarket/formats.html) format (features × barcodes), one per assay present in the `SummarizedExperiment` (`counts.mtx.gz`, `CPM.mtx.gz`, `fullLengthCounts.mtx.gz`, `uniqueCounts.mtx.gz`). See the **Count Matrices** section below for what each assay contains.
+| `barcodes.tsv.gz` | Gzip-compressed list of cell barcodes (one per line) corresponding to the columns of each `.mtx.gz`. Barcodes follow the `sampleName_barcode` naming convention for multi-sample runs.
+| `features.tsv.gz` | Gzip-compressed three-column TSV corresponding to the rows of each `.mtx.gz`. Column 1 is the feature ID (transcript ID for transcript-level matrices, gene ID for gene-level matrices). Column 2 is the feature name (same as column 1). Column 3 is the feature type (`Transcript Expression` for transcript-level matrices, `Gene Expression` for gene-level matrices).
 | `software_versions.yml` | A YAML file listing the versions of all software tools used during the pipeline run.
 | `execution_timeline.html` | Pipeline execution timeline. See [Nextflow docs](https://www.nextflow.io/docs/latest/tracing.html#timeline-report).
 | `execution_report.html` | Resource and runtime report for the pipeline run. See [Nextflow docs](https://www.nextflow.io/docs/latest/tracing.html).

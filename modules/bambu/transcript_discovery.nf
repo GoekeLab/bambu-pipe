@@ -30,6 +30,7 @@ process BAMBU_TRANSCRIPT_DISCOVERY{
 	#!/usr/bin/env Rscript
     if ("$params.bambu_path" == "null") { library("bambu") } else { library("devtools"); load_all("$params.bambu_path") }
     library(DropletUtils)
+    source(Sys.which("save_counts.R"))
 
     annotation <- readRDS("$bambu_annotation")
     readClassFile <- strsplit("${rds_files.join(',')}", ",")[[1]]
@@ -54,13 +55,11 @@ process BAMBU_TRANSCRIPT_DISCOVERY{
     seDiscovery <- generateUniqueCountsSEFromQuantData(quantData, extendedAnno)
     colData(seDiscovery)\$chemistry  <- unname(chemistry[colData(seDiscovery)\$sampleName]) # Add chemistry into colData (for subsequent batch correction)
     colData(seDiscovery)\$technology <- unname(technology[colData(seDiscovery)\$sampleName]) # Add technology into colData (for subsequent batch correction)
-    write10xCounts("unique_counts", assays(seDiscovery)\$counts, version = "3", gene.type = "Transcript Expression")
-    saveRDS(seDiscovery, "unique_counts/se_unique_counts.rds")
+    save_counts(seDiscovery, "unique_counts", "Transcript Expression")
 
     # Generate gene counts SE from unique counts SE
     seDiscovery.gene <- transcriptToGeneExpression(seDiscovery)
-    write10xCounts("gene_counts", assays(seDiscovery.gene)\$counts, version = "3")
-    saveRDS(seDiscovery.gene, "gene_counts/se_gene_counts.rds")
+    save_counts(seDiscovery.gene, "gene_counts")
 
     # Save sampleNames (required for multi-sample Seurat clustering)
     saveRDS(sampleNames, "sample_names.rds")
