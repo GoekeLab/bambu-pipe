@@ -173,7 +173,7 @@ output/
 │   ├── barcodes.tsv.gz
 │   └── features.tsv.gz
 │
-│   # single-cell EM (--quantification_mode EM):
+│   # single-cell EM:
 ├── transcript_counts_singlecell/
 │   ├── se_transcript_counts_singlecell.rds
 │   ├── counts.mtx.gz
@@ -183,9 +183,8 @@ output/
 │   ├── barcodes.tsv.gz
 │   └── features.tsv.gz
 │
-│   # clustered EM (--quantification_mode EM_clusters):
+│   # cluster-level EM:
 ├── seurat_obj.rds
-│
 ├── transcript_counts_clusters/
 │   ├── se_transcript_counts_clusters.rds
 │   ├── counts.mtx.gz
@@ -194,7 +193,6 @@ output/
 │   ├── uniqueCounts.mtx.gz
 │   ├── barcodes.tsv.gz
 │   └── features.tsv.gz
-│
 ├── gene_counts_clusters/
 │   ├── se_gene_counts_clusters.rds
 │   ├── counts.mtx.gz
