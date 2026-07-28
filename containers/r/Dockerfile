@@ -19,7 +19,7 @@ RUN micromamba install -y -n base -c conda-forge -c bioconda \
     && micromamba clean --all --yes
 
 # Clone bambu single cell feature branch 
-RUN git clone --branch exportNewFunctions \
+RUN git clone --branch devel_pre_v4 \
     https://github.com/GoekeLab/bambu.git /opt/bambu \
     && R -e 'devtools::install("/opt/bambu")'
 

@@ -4,7 +4,6 @@ include { SEURAT_MULTI_SAMPLE  } from '../modules/seurat/multi_sample.nf'
 workflow CLUSTERING {
     take:
     ch_se_gene_counts
-    ch_sample_names
     ch_n_samples
 
     main:
@@ -16,7 +15,7 @@ workflow CLUSTERING {
         }
 
     SEURAT_SINGLE_SAMPLE(ch_se_branched.single.map { se, _n -> se })
-    SEURAT_MULTI_SAMPLE(ch_se_branched.multi.map { se, _n -> se }, ch_sample_names)
+    SEURAT_MULTI_SAMPLE(ch_se_branched.multi.map { se, _n -> se })
 
     emit:
     clusters = SEURAT_SINGLE_SAMPLE.out.clusters.mix(SEURAT_MULTI_SAMPLE.out.clusters)

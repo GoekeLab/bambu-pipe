@@ -8,7 +8,6 @@ process SEURAT_MULTI_SAMPLE {
 
     input:
     path(se)
-    path(sample_names)
 
     output:
     path ('clusters.rds'), emit: clusters
@@ -19,7 +18,6 @@ process SEURAT_MULTI_SAMPLE {
     """
     #!/usr/bin/env Rscript
     library(SummarizedExperiment)
-    library(IRanges)
     library(Seurat)
 
     # Extract gene count matrix and colData metadata
@@ -55,24 +53,13 @@ process SEURAT_MULTI_SAMPLE {
     cellMix <- FindClusters(cellMix, resolution = $params.resolution, cluster.name = "harmony_clusters")
     saveRDS(cellMix, "seurat_obj.rds")
 
-    # Build ordered list of CompressedCharacterLists, one per sample, in quantData order
-    allBarcodes   <- names(cellMix\$harmony_clusters)
-    clusterLabels <- paste0("cluster", as.character(cellMix\$harmony_clusters))
-    sampleNames   <- readRDS("$sample_names") # sampleNames contain the order of the samples in quantData 
-
-    clusters <- setNames(lapply(sampleNames, function(s) {
-        idx           <- which(cellMix\$sample == s)
-        sampleBarcode <- allBarcodes[idx]
-        clusterLabel  <- paste0(s, "_", clusterLabels[idx])
-        splitAsList(sampleBarcode, clusterLabel)
-    }), sampleNames)
+    clusters <- setNames(paste0("cluster_", cellMix\$harmony_clusters), names(cellMix\$harmony_clusters))
     saveRDS(clusters, "clusters.rds")
 
     writeLines(c(
         '"${task.process}":',
         paste0('    R: ',                   R.Version()\$version.string),
         paste0('    seurat: ',              as.character(packageVersion("Seurat"))),
-        paste0('    IRanges: ',             as.character(packageVersion("IRanges"))),
         paste0('    SummarizedExperiment: ', as.character(packageVersion("SummarizedExperiment")))
     ), "versions.yml")
     """
