@@ -18,6 +18,8 @@ RUN micromamba install -y -n base -c conda-forge -c bioconda \
     r-seurat=5.4.0 \
     r-harmony=2.0.2 \
     r-data.table=1.17.8 \
+    r-magick \
+    r-leidenalg \
     gxx=15.2.0 \
     && micromamba clean --all --yes
 
