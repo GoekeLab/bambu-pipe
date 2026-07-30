@@ -1,12 +1,12 @@
 process SEURAT_VISIUM_HD {
     publishDir "$params.output_dir", mode: 'copy', pattern: 'seurat_obj.rds'
-    label "r"
+    label "seurat"
     label "medium_cpu"
     label "high_mem"
     label "long"
 
     input:
-    tuple val(resolution), path(se_gene_counts), path(spot_mappings)
+    tuple val(resolution), path(gene_counts), path(col_data), path(spot_mappings)
 
     output:
     path ("clusters.rds"), emit: clusters
@@ -17,16 +17,19 @@ process SEURAT_VISIUM_HD {
     """
     #!/usr/bin/env Rscript
     library(Seurat)
-    library(SummarizedExperiment)
+    source(Sys.which("create_seurat_object.R"))
     source(Sys.which("visium_hd_cluster.R"))
 
     banksy <- as.logical("$params.banksy")
     assay  <- "Spatial.$resolution"
 
-    # the aggregated SE already carries each bin's tissue position in colData
-    se           <- readRDS("$se_gene_counts")
+    # Load spotMappings containing 2um barcode to bin (e.g., 8um/16um) mapping information 
     spotMappings <- read.csv("$spot_mappings", stringsAsFactors = FALSE)
-    object       <- CreateSeuratObject(assays(se)\$counts, assay = assay, meta.data = as.data.frame(colData(se)))
+
+    # Create Seurat object with bambu's colData as its metadata
+    colData      <- readRDS("$col_data")
+    binMetadata  <- colData[, colnames(colData) != "barcodes"] # drop barcodes column (list) to prevent downstream issues with Seurat
+    object       <- createSeuratObject("$gene_counts", assay = assay, metadata = binMetadata)
 
     DefaultAssay(object) <- assay
     object <- NormalizeData(object, verbose = FALSE)

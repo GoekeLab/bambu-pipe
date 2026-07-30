@@ -1,7 +1,7 @@
 process AGGREGATE_BINS_VISIUM_HD {
     publishDir "$params.output_dir/unique_counts", mode: 'copy', pattern: 'unique_counts_*'
     publishDir "$params.output_dir/gene_counts", mode: 'copy', pattern: 'gene_counts_*'
-    label "r"
+    label "bambu"
     label "low_cpu"
     label "medium_mem"
     label "short"
@@ -13,7 +13,7 @@ process AGGREGATE_BINS_VISIUM_HD {
     output:
     tuple val(resolution), path("unique_counts_${resolution}"), emit: unique_counts
     tuple val(resolution), path("gene_counts_${resolution}"),   emit: gene_counts
-    tuple val(resolution), path("gene_counts_${resolution}/se_gene_counts_${resolution}.rds"), emit: se_gene_counts
+    tuple val(resolution), path("col_data_${resolution}.rds"),  emit: col_data
     path "versions.yml", topic: 'versions'
 
     script:
@@ -36,6 +36,10 @@ process AGGREGATE_BINS_VISIUM_HD {
 
     saveCounts(uniqueAgg, "unique_counts_$resolution", "Transcript Expression")
     saveCounts(geneAgg,   "gene_counts_$resolution")
+
+    # colData is saved to create the Seurat object's metadata
+    binColData <- as.data.frame(colData(geneAgg))
+    saveRDS(binColData, "col_data_${resolution}.rds")
 
     writeLines(c('"${task.process}":', paste0('    R: ', R.Version()\$version.string), paste0('    bambu: ', as.character(packageVersion("bambu")))), "versions.yml")
     """

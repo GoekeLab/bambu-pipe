@@ -1,13 +1,13 @@
 process SEURAT_MULTI_SAMPLE {
     publishDir "$params.output_dir", mode: 'copy', pattern: 'seurat_obj.rds'
     publishDir "$params.output_dir/intermediate_R", mode: 'copy', pattern: 'clusters.rds', enabled: params.save_intermediates
-    label "r"
+    label "seurat"
     label "medium_cpu"
     label "high_mem"
     label "medium"
 
     input:
-    path(se)
+    tuple path(gene_counts), path(col_data)
 
     output:
     path ('clusters.rds'), emit: clusters
@@ -17,23 +17,18 @@ process SEURAT_MULTI_SAMPLE {
     script:
     """
     #!/usr/bin/env Rscript
-    library(SummarizedExperiment)
     library(Seurat)
+    source(Sys.which("create_seurat_object.R"))
 
-    # Extract gene count matrix and colData metadata
-    se     <- readRDS("$se")
-    counts <- assays(se)\$counts
-    dim    <- $params.seurat_dim_multi
+    metadata <- readRDS("$col_data")
+    dim      <- $params.seurat_dim_multi
 
-    # Create Seurat object and append metadata
-    cellMix <- CreateSeuratObject(counts = counts, project = "cellMix", min.cells = 1)
-    cellMix\$sample     <- setNames(colData(se)\$sampleName,  colnames(se))
-    cellMix\$chemistry  <- setNames(colData(se)\$chemistry,   colnames(se))
-    cellMix\$technology <- setNames(colData(se)\$technology,  colnames(se))
-    cellMix\$orig.ident <- cellMix\$sample
+    # Create Seurat object with bambu's colData as its metadata
+    cellMix <- createSeuratObject("$gene_counts", metadata = metadata, minCells = 1, project = "cellMix")
+    cellMix\$orig.ident <- cellMix\$sampleName
 
     # scRNA-seq multi-sample integration using Harmony adapted from https://satijalab.org/seurat/articles/seurat5_integration
-    cellMix[["RNA"]] <- split(cellMix[["RNA"]], f = cellMix\$sample)
+    cellMix[["RNA"]] <- split(cellMix[["RNA"]], f = cellMix\$sampleName)
     cellMix <- NormalizeData(cellMix)
     cellMix <- FindVariableFeatures(cellMix)
     cellMix <- ScaleData(cellMix)
@@ -58,9 +53,9 @@ process SEURAT_MULTI_SAMPLE {
 
     writeLines(c(
         '"${task.process}":',
-        paste0('    R: ',                   R.Version()\$version.string),
-        paste0('    seurat: ',              as.character(packageVersion("Seurat"))),
-        paste0('    SummarizedExperiment: ', as.character(packageVersion("SummarizedExperiment")))
+        paste0('    R: ',       R.Version()\$version.string),
+        paste0('    seurat: ',  as.character(packageVersion("Seurat"))),
+        paste0('    harmony: ', as.character(packageVersion("harmony")))
     ), "versions.yml")
     """
 }

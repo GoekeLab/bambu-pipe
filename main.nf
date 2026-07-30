@@ -92,7 +92,7 @@ workflow STANDARD {
 
         // cluster the cells first, then pool each cluster's cells for the EM
         if (params.quantification_mode == 'EM_clusters') {
-            CLUSTERING(BAMBU_TRANSCRIPT_DISCOVERY.out.se_gene_counts, ch_n_samples)
+            CLUSTERING(BAMBU_TRANSCRIPT_DISCOVERY.out.gene_counts, BAMBU_TRANSCRIPT_DISCOVERY.out.col_data, ch_n_samples)
             BAMBU_CLUSTER_LEVEL_QUANTIFICATION(CLUSTERING.out.clusters, BAMBU_TRANSCRIPT_DISCOVERY.out.quant_data, BAMBU_TRANSCRIPT_DISCOVERY.out.extended_annotations, ch_genome)
         } else if (params.quantification_mode == 'EM') {
             BAMBU_SINGLE_CELL_QUANTIFICATION(BAMBU_TRANSCRIPT_DISCOVERY.out.quant_data, BAMBU_TRANSCRIPT_DISCOVERY.out.extended_annotations, ch_genome)
@@ -133,9 +133,10 @@ workflow VISIUM_HD {
     if (params.quantification_mode == 'EM_clusters') {
         def requested_bin = String.format('%03dum', params.clustering_bin) // convert clustering_bin specified as an integer into Spaceranger format
         // perform clustering at the requested resolution only
-        ch_clustering = AGGREGATE_BINS_VISIUM_HD.out.se_gene_counts
-            .filter { resolution, _se_gene_counts -> resolution == requested_bin }
-            .join(SPOT_BIN_MAPPINGS.out.csv) // [resolution, se_gene_counts, spot_mappings]
+        ch_clustering = AGGREGATE_BINS_VISIUM_HD.out.gene_counts
+            .join(AGGREGATE_BINS_VISIUM_HD.out.col_data)
+            .filter { resolution, _gene_counts, _col_data -> resolution == requested_bin }
+            .join(SPOT_BIN_MAPPINGS.out.csv) // [resolution, gene_counts, col_data, spot_mappings]
         SEURAT_VISIUM_HD(ch_clustering)
         BAMBU_CLUSTER_LEVEL_QUANTIFICATION(SEURAT_VISIUM_HD.out.clusters, ch_quant_data, ch_extended_anno, ch_genome)
 

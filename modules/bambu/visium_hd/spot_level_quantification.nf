@@ -1,6 +1,6 @@
 process BAMBU_SPOT_LEVEL_QUANTIFICATION {
     publishDir "$params.output_dir/transcript_counts", mode: 'copy', pattern: 'transcript_counts_*'
-    label "r"
+    label "bambu"
     label "low_cpu"
     label "high_mem"
     label "long"

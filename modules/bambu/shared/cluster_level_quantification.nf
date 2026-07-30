@@ -1,7 +1,7 @@
 process BAMBU_CLUSTER_LEVEL_QUANTIFICATION {
     publishDir "$params.output_dir", mode: 'copy', pattern: 'transcript_counts_clusters'
     publishDir "$params.output_dir", mode: 'copy', pattern: 'gene_counts_clusters'
-    label "r"
+    label "bambu"
     label "low_cpu"
     label "high_mem"
     label "long"
