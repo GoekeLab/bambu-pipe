@@ -3,25 +3,25 @@
 nextflow.enable.types = true
 
 // subworkflows
-include { PREPARE_INPUT_STANDARD }                from './subworkflows/prepare_input_standard.nf'
-include { PREPARE_INPUT_VISIUM_HD }               from './subworkflows/prepare_input_visium_hd.nf'
-include { ALIGNMENT }                             from './subworkflows/alignment.nf'
-include { CLUSTERING }                            from './subworkflows/clustering_standard.nf'
+include { PREPARE_INPUT_STANDARD }               from './subworkflows/prepare_input_standard.nf'
+include { PREPARE_INPUT_VISIUM_HD }              from './subworkflows/prepare_input_visium_hd.nf'
+include { ALIGNMENT }                            from './subworkflows/alignment.nf'
+include { CLUSTERING }                           from './subworkflows/clustering_standard.nf'
 
 // modules
-include { DECOMPRESS as DECOMPRESS_GENOME }       from './modules/decompress.nf'
-include { DECOMPRESS as DECOMPRESS_ANNOTATION }   from './modules/decompress.nf'
-include { PREPROCESS_FASTQ }                      from './modules/preprocess_fastq.nf'
-include { BAMBU_PREPARE_ANNOTATION }              from './modules/bambu/shared/prepare_annotation.nf'
-include { BAMBU_CONSTRUCT_READ_CLASS }            from './modules/bambu/shared/construct_read_class.nf'
-include { BAMBU_TRANSCRIPT_DISCOVERY }            from './modules/bambu/standard/transcript_discovery.nf'
-include { BAMBU_CLUSTERED_EM }                    from './modules/bambu/shared/clustered_quantification.nf'
-include { BAMBU_EM }                              from './modules/bambu/standard/single_cell_quantification.nf'
-include { BAMBU_TRANSCRIPT_DISCOVERY_VISIUM_HD }  from './modules/bambu/visium_hd/transcript_discovery.nf'
-include { BAMBU_EM_VISIUM_HD }                    from './modules/bambu/visium_hd/spot_level_quantification.nf'
-include { AGGREGATE_BINS_VISIUM_HD }              from './modules/bambu/visium_hd/aggregate_bins.nf'
-include { SPOT_BIN_MAPPINGS }                     from './modules/prepare_input/visium_hd/spot_bin_mappings.nf'
-include { SEURAT_VISIUM_HD }                      from './modules/seurat/visium_hd/clustering.nf'
+include { DECOMPRESS as DECOMPRESS_GENOME }      from './modules/decompress.nf'
+include { DECOMPRESS as DECOMPRESS_ANNOTATION }  from './modules/decompress.nf'
+include { PREPROCESS_FASTQ }                     from './modules/preprocess_fastq.nf'
+include { BAMBU_PREPARE_ANNOTATION }             from './modules/bambu/shared/prepare_annotation.nf'
+include { BAMBU_CONSTRUCT_READ_CLASS }           from './modules/bambu/shared/construct_read_class.nf'
+include { BAMBU_CLUSTER_LEVEL_QUANTIFICATION }   from './modules/bambu/shared/cluster_level_quantification.nf'
+include { BAMBU_TRANSCRIPT_DISCOVERY }           from './modules/bambu/standard/transcript_discovery.nf'
+include { BAMBU_SINGLE_CELL_QUANTIFICATION }      from './modules/bambu/standard/single_cell_quantification.nf'
+include { BAMBU_TRANSCRIPT_DISCOVERY_VISIUM_HD } from './modules/bambu/visium_hd/transcript_discovery.nf'
+include { BAMBU_SPOT_LEVEL_QUANTIFICATION }      from './modules/bambu/visium_hd/spot_level_quantification.nf'
+include { AGGREGATE_BINS_VISIUM_HD }             from './modules/bambu/visium_hd/aggregate_bins.nf'
+include { SPOT_BIN_MAPPINGS }                    from './modules/prepare_input/visium_hd/spot_bin_mappings.nf'
+include { SEURAT_VISIUM_HD }                     from './modules/seurat/visium_hd/clustering.nf'
 
 params {
     input: Path
@@ -93,9 +93,9 @@ workflow STANDARD {
         // cluster the cells first, then pool each cluster's cells for the EM
         if (params.quantification_mode == 'EM_clusters') {
             CLUSTERING(BAMBU_TRANSCRIPT_DISCOVERY.out.se_gene_counts, ch_n_samples)
-            BAMBU_CLUSTERED_EM(CLUSTERING.out.clusters, BAMBU_TRANSCRIPT_DISCOVERY.out.quant_data, BAMBU_TRANSCRIPT_DISCOVERY.out.extended_annotations, ch_genome)
+            BAMBU_CLUSTER_LEVEL_QUANTIFICATION(CLUSTERING.out.clusters, BAMBU_TRANSCRIPT_DISCOVERY.out.quant_data, BAMBU_TRANSCRIPT_DISCOVERY.out.extended_annotations, ch_genome)
         } else if (params.quantification_mode == 'EM') {
-            BAMBU_EM(BAMBU_TRANSCRIPT_DISCOVERY.out.quant_data, BAMBU_TRANSCRIPT_DISCOVERY.out.extended_annotations, ch_genome)
+            BAMBU_SINGLE_CELL_QUANTIFICATION(BAMBU_TRANSCRIPT_DISCOVERY.out.quant_data, BAMBU_TRANSCRIPT_DISCOVERY.out.extended_annotations, ch_genome)
         }
     }
 }
@@ -132,21 +132,19 @@ workflow VISIUM_HD {
 
     if (params.quantification_mode == 'EM_clusters') {
         def requested_bin = String.format('%03dum', params.clustering_bin) // convert clustering_bin specified as an integer into Spaceranger format
-
         // perform clustering at the requested resolution only
         ch_clustering = AGGREGATE_BINS_VISIUM_HD.out.se_gene_counts
             .filter { resolution, _se_gene_counts -> resolution == requested_bin }
             .join(SPOT_BIN_MAPPINGS.out.csv) // [resolution, se_gene_counts, spot_mappings]
         SEURAT_VISIUM_HD(ch_clustering)
-        BAMBU_CLUSTERED_EM(SEURAT_VISIUM_HD.out.clusters, ch_quant_data, ch_extended_anno, ch_genome)
-    }
+        BAMBU_CLUSTER_LEVEL_QUANTIFICATION(SEURAT_VISIUM_HD.out.clusters, ch_quant_data, ch_extended_anno, ch_genome)
 
-    if (params.quantification_mode != 'no_quant') {
+    } else if (params.quantification_mode == 'EM') {
         // run spot level quantification on all resolution
         // at 2um resolution, tissue_positions and spot_mappings are not required
-        ch_resolution_002um = channel.of(['002um', [], []])       
-        ch_resolutions      = ch_resolution_002um.mix(ch_bins) // [resolution, tissue_positions, spot_mappings]
-        BAMBU_EM_VISIUM_HD(ch_resolutions, ch_quant_data, ch_extended_anno, ch_genome)
+        ch_resolution_002um = channel.of(['002um', [], []])
+        ch_resolutions      = ch_resolution_002um.concat(ch_bins) // [resolution, tissue_positions, spot_mappings]
+        BAMBU_SPOT_LEVEL_QUANTIFICATION(ch_resolutions, ch_quant_data, ch_extended_anno, ch_genome)
     }
 }
 

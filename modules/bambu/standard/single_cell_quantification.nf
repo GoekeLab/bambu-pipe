@@ -1,4 +1,4 @@
-process BAMBU_EM {
+process BAMBU_SINGLE_CELL_QUANTIFICATION {
     publishDir "$params.output_dir", mode: 'copy', pattern: 'transcript_counts_singlecell'
     label "r"
     label "low_cpu"
