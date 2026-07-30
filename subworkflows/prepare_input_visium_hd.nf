@@ -1,6 +1,6 @@
-include { FILTER_BARCODED_BAM }      from '../modules/prepare_input_visium_hd/filter_barcoded_bam.nf'
-include { CONVERT_BARCODE_MAPPINGS } from '../modules/prepare_input_visium_hd/convert_barcode_mappings.nf'
-include { CONVERT_TISSUE_POSITIONS } from '../modules/prepare_input_visium_hd/convert_tissue_positions.nf'
+include { FILTER_BARCODED_BAM }      from '../modules/prepare_input/visium_hd/filter_barcoded_bam.nf'
+include { CONVERT_BARCODE_MAPPINGS } from '../modules/prepare_input/visium_hd/convert_barcode_mappings.nf'
+include { CONVERT_TISSUE_POSITIONS } from '../modules/prepare_input/visium_hd/convert_tissue_positions.nf'
 
 workflow PREPARE_INPUT_VISIUM_HD {
     take:

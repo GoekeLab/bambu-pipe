@@ -20,7 +20,7 @@ include { BAMBU_EM }                              from './modules/bambu/standard
 include { BAMBU_TRANSCRIPT_DISCOVERY_VISIUM_HD }  from './modules/bambu/visium_hd/transcript_discovery.nf'
 include { BAMBU_EM_VISIUM_HD }                    from './modules/bambu/visium_hd/spot_level_quantification.nf'
 include { AGGREGATE_BINS_VISIUM_HD }              from './modules/bambu/visium_hd/aggregate_bins.nf'
-include { SPOT_BIN_MAPPINGS }                     from './modules/prepare_input_visium_hd/spot_bin_mappings.nf'
+include { SPOT_BIN_MAPPINGS }                     from './modules/prepare_input/visium_hd/spot_bin_mappings.nf'
 include { SEURAT_VISIUM_HD }                      from './modules/seurat/visium_hd/clustering.nf'
 
 params {
