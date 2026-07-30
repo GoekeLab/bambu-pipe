@@ -20,15 +20,25 @@ aggregateResolution <- function(se, tissuePositions, spotMappings) {
     spotCounts <- assays(se)$counts
     binCounts  <- as(spotCounts %*% spotsPerBin, "CsparseMatrix")
 
-    # build new colData for the aggregated SE object
-    barcodePerBin  <- distinct(spotMappings, sample_bin, barcode = bin)
-    positionPerBin <- data.frame(sample_bin = binIds) %>%
-        left_join(barcodePerBin, by = "sample_bin") %>%
-        left_join(tissuePositions, by = "barcode") %>%
+    ## build new colData for the aggregated SE object
+    
+    # bin id -> barcode (without sampleName prefix), e.g. sample_s_008um_00247_00090-1 -> s_008um_00247_00090-1
+    binIdToBarcodeMap <- distinct(spotMappings, sample_bin, barcode = bin)
+
+    # bin id -> the 2um barcodes the bin contains
+    binToSpotsMap <- data.frame(sample_bin = as.character(spotToBinMap), barcode = colData(se)$barcode) %>%
+        group_by(sample_bin) %>%
+        summarise(barcodes = list(barcode), .groups = "drop")
+
+    # creates dataframe containing one row per bin, each row contains metadata information (e.g., barcode, in_tissue, array and pixel coordinates)
+    metadataPerBin <- data.frame(sample_bin = binIds) %>%
+        left_join(binIdToBarcodeMap, by = "sample_bin") %>%
+        left_join(binToSpotsMap,     by = "sample_bin") %>%
+        left_join(tissuePositions,   by = "barcode") %>%
         select(-sample_bin)
 
     sampleName <- unique(colData(se)$sampleName)
-    binColData <- DataFrame(id = binIds, sampleName = sampleName, positionPerBin, row.names = binIds)
+    binColData <- DataFrame(id = binIds, sampleName = sampleName, metadataPerBin, row.names = binIds)
 
     binSe <- SummarizedExperiment(assays = SimpleList(counts = binCounts),
                                   rowRanges = rowRanges(se),

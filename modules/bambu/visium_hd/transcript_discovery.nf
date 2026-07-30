@@ -1,7 +1,7 @@
 process BAMBU_TRANSCRIPT_DISCOVERY_VISIUM_HD {
     publishDir "$params.output_dir", mode: 'copy', pattern: 'extended_annotations.gtf'
-    publishDir "$params.output_dir", mode: 'copy', pattern: 'unique_counts_002um'
-    publishDir "$params.output_dir", mode: 'copy', pattern: 'gene_counts_002um'
+    publishDir "$params.output_dir/unique_counts", mode: 'copy', pattern: 'unique_counts_002um'
+    publishDir "$params.output_dir/gene_counts", mode: 'copy', pattern: 'gene_counts_002um'
     publishDir "$params.output_dir/intermediate_R", mode: 'copy', pattern: '*.rds', enabled: params.save_intermediates
     label "r"
     label "medium_cpu"

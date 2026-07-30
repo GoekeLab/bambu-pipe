@@ -1,6 +1,6 @@
 process AGGREGATE_BINS_VISIUM_HD {
-    publishDir "$params.output_dir", mode: 'copy', pattern: 'unique_counts_*'
-    publishDir "$params.output_dir", mode: 'copy', pattern: 'gene_counts_*'
+    publishDir "$params.output_dir/unique_counts", mode: 'copy', pattern: 'unique_counts_*'
+    publishDir "$params.output_dir/gene_counts", mode: 'copy', pattern: 'gene_counts_*'
     label "r"
     label "low_cpu"
     label "medium_mem"
