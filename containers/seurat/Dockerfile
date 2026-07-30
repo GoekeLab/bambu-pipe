@@ -2,7 +2,9 @@
 FROM satijalab/seurat:5.4.0
 
 # procps supplies the ps that Nextflow uses to collect task metrics
-RUN apt-get update && apt-get install -y --no-install-recommends procps \
+# libmagick++-dev is needed by magick, an import of SpatialExperiment (a Banksy dependency)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        procps libmagick++-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Seurat Wrappers, plus Banksy for spatially aware clustering (Banksy is only a
