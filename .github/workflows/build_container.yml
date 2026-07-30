@@ -57,8 +57,17 @@ jobs:
             fi
           done
 
-          # devel is at or ahead of main, so it is the baseline for "did this container change"
-          DIFF_BASE=refs/base/devel
+          # devel is at or ahead of main, so it is the baseline for "did this branch edit a container"
+          DEVEL=refs/base/devel
+
+          # a container is only rebuilt by a push that touches it, so the previous push is the
+          # baseline for that. devel is the fallback when that commit cannot be fetched, which is
+          # the case on the first push of a branch, on a force push and on a manual run
+          PUSH_BASE=$DEVEL
+          BEFORE="${{ github.event.before }}"
+          if [ -n "$BEFORE" ] && git fetch --no-tags --depth=1 origin "$BEFORE" 2>/dev/null; then
+            PUSH_BASE=$BEFORE
+          fi
 
           # Every containers/<label>/Dockerfile is an image whose <label> is its process label
           : > selected.txt
@@ -75,13 +84,18 @@ jobs:
               *) echo "::error::refusing to push outside ghcr.io/goekelab: $IMAGE"; exit 1 ;;
             esac
 
-            CHANGED=false
-            if ! git diff --quiet "$DIFF_BASE" HEAD -- "containers/$LABEL"; then
-              CHANGED=true
+            EDITED_ON_BRANCH=false
+            if ! git diff --quiet "$DEVEL" HEAD -- "containers/$LABEL"; then
+              EDITED_ON_BRANCH=true
+            fi
+
+            EDITED_BY_PUSH=false
+            if ! git diff --quiet "$PUSH_BASE" HEAD -- "containers/$LABEL"; then
+              EDITED_BY_PUSH=true
             fi
 
             # A tag main or devel is pinned to is immutable, so an edit needs a tag bump first
-            if [ "$RELEASED" = false ] && [ "$CHANGED" = true ]; then
+            if [ "$RELEASED" = false ] && [ "$EDITED_ON_BRANCH" = true ]; then
               for REF in $BASES; do
                 PINNED=$(git show "$REF:conf/containers.config" 2>/dev/null \
                   | sed -n "s|.*withLabel: *'$LABEL'.*container *= *\"\([^\"]*\)\".*|\1|p")
@@ -94,7 +108,7 @@ jobs:
 
             # An unpublished tag is always built, since the pipeline cannot pull what is not there
             if [ "${{ inputs.force }}" != "true" ] && docker manifest inspect "$IMAGE" >/dev/null 2>&1; then
-              if [ "$RELEASED" = true ] || [ "$CHANGED" = false ]; then
+              if [ "$RELEASED" = true ] || [ "$EDITED_BY_PUSH" = false ]; then
                 echo "::notice::$IMAGE is already published and unchanged -- skipping $LABEL"
                 continue
               fi
