@@ -1,0 +1,11 @@
+# Seurat 5.4.0 and harmony are already installed in the base image
+FROM satijalab/seurat:5.4.0
+
+# procps supplies the ps that Nextflow uses to collect task metrics
+RUN apt-get update && apt-get install -y --no-install-recommends procps \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Seurat Wrappers, plus Banksy for spatially aware clustering (Banksy is only a
+# suggested dependency of Seurat Wrappers, so it is not installed alongside it)
+RUN R -e 'remotes::install_github("satijalab/seurat-wrappers", upgrade = "never")' \
+    && R -e 'library(SeuratWrappers); library(Banksy); library(harmony)'

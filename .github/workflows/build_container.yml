@@ -1,13 +1,16 @@
-name: Build R container
+name: Build R containers
 
-# The image tag is read from conf/containers.config, so that single line is both what the
-# pipeline pulls and what this workflow publishes -- the two cannot drift.
-# Runs on pushes to a feature branch, whenever the container changes.
+# The image tag of the container is read from conf/containers.config, so that the tag is
+# what the pipeline pulls and what this workflow publishes. Each container is built independently,
+# so updating one tag in conf/containers.config rebuilds only that image:
+#   feature branch - rebuilds its tag on every push, unless main or devel is pinned to that tag
+#   main or devel  - builds only a tag that has never been published, so most merges are a no-op
+#   manual run     - 'force' rebuilds and overwrites the tag on any branch
 
 on:
   push:
     paths:
-      - 'containers/r/**'
+      - 'containers/**'
       - 'conf/containers.config'
       - '.github/workflows/build_container.yml'
   workflow_dispatch:
@@ -22,44 +25,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Build and publish
+  discover:
+    name: Select containers to build
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
+      packages: read
+    outputs:
+      containers: ${{ steps.select.outputs.containers }}
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Resolve image from conf/containers.config
-        id: image
-        run: |
-          IMAGE=$(sed -n "s|.*withLabel: *'r'.*container *= *\"\([^\"]*\)\".*|\1|p" conf/containers.config)
-          if [ -z "$IMAGE" ]; then
-            echo "::error::could not parse the 'r' container from conf/containers.config"
-            exit 1
-          fi
-          case "$IMAGE" in
-            ghcr.io/goekelab/*) ;;
-            *) echo "::error::refusing to push outside ghcr.io/goekelab: $IMAGE"; exit 1 ;;
-          esac
-          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
-          echo "Resolved container: $IMAGE"
-
-      - name: Refuse to overwrite a tag main or devel is pinned to
-        if: github.ref_name != 'main' && github.ref_name != 'devel'
-        run: |
-          IMAGE="${{ steps.image.outputs.image }}"
-          for BASE in main devel; do
-            git fetch --no-tags --depth=1 origin "$BASE" 2>/dev/null || continue
-            PINNED=$(git show "FETCH_HEAD:conf/containers.config" 2>/dev/null \
-              | sed -n "s|.*withLabel: *'r'.*container *= *\"\([^\"]*\)\".*|\1|p")
-            if [ "$IMAGE" = "$PINNED" ]; then
-              echo "::error::$BASE is pinned to $IMAGE -- bump the tag in conf/containers.config before rebuilding it"
-              exit 1
-            fi
-          done
 
       - uses: docker/login-action@v3
         with:
@@ -67,36 +43,98 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Decide whether to build
-        id: decide
+      - name: Select containers to build
+        id: select
         run: |
-          IMAGE="${{ steps.image.outputs.image }}"
-          if docker manifest inspect "$IMAGE" >/dev/null 2>&1; then EXISTS=true; else EXISTS=false; fi
+          RELEASED=false
+          case "${{ github.ref_name }}" in main|devel) RELEASED=true ;; esac
 
-          if [ "${{ inputs.force }}" = "true" ]; then
-            BUILD=true
-          elif [ "${{ github.ref_name }}" = "main" ] || [ "${{ github.ref_name }}" = "devel" ]; then
-            # Released tags are immutable: the merge that brought the bump in has already
-            # published it from the feature branch, so there is nothing left to do
-            [ "$EXISTS" = "false" ] && BUILD=true || BUILD=false
-          else
-            # Feature branch: the tag is unreleased (guarded above), so rebuild freely
-            BUILD=true
-          fi
+          # Each base branch is fetched into its own ref so both stay readable in the loop
+          BASES=""
+          for BASE in devel main; do
+            if git fetch --no-tags --depth=1 origin "$BASE:refs/base/$BASE" 2>/dev/null; then
+              BASES="$BASES refs/base/$BASE"
+            fi
+          done
 
-          echo "build=$BUILD" >> "$GITHUB_OUTPUT"
-          if [ "$BUILD" = "false" ]; then
-            echo "::notice::$IMAGE is already published -- skipping build"
-          fi
+          # devel is at or ahead of main, so it is the baseline for "did this container change"
+          DIFF_BASE=refs/base/devel
+
+          # Every containers/<label>/Dockerfile is an image whose <label> is its process label
+          : > selected.txt
+          for DOCKERFILE in containers/*/Dockerfile; do
+            LABEL=$(basename "$(dirname "$DOCKERFILE")")
+            IMAGE=$(sed -n "s|.*withLabel: *'$LABEL'.*container *= *\"\([^\"]*\)\".*|\1|p" conf/containers.config)
+
+            if [ -z "$IMAGE" ]; then
+              echo "::error::could not parse the '$LABEL' container from conf/containers.config"
+              exit 1
+            fi
+            case "$IMAGE" in
+              ghcr.io/goekelab/*) ;;
+              *) echo "::error::refusing to push outside ghcr.io/goekelab: $IMAGE"; exit 1 ;;
+            esac
+
+            CHANGED=false
+            if ! git diff --quiet "$DIFF_BASE" HEAD -- "containers/$LABEL"; then
+              CHANGED=true
+            fi
+
+            # A tag main or devel is pinned to is immutable, so an edit needs a tag bump first
+            if [ "$RELEASED" = false ] && [ "$CHANGED" = true ]; then
+              for REF in $BASES; do
+                PINNED=$(git show "$REF:conf/containers.config" 2>/dev/null \
+                  | sed -n "s|.*withLabel: *'$LABEL'.*container *= *\"\([^\"]*\)\".*|\1|p")
+                if [ "$IMAGE" = "$PINNED" ]; then
+                  echo "::error::${REF#refs/base/} is pinned to $IMAGE -- bump the tag in conf/containers.config before rebuilding it"
+                  exit 1
+                fi
+              done
+            fi
+
+            # An unpublished tag is always built, since the pipeline cannot pull what is not there
+            if [ "${{ inputs.force }}" != "true" ] && docker manifest inspect "$IMAGE" >/dev/null 2>&1; then
+              if [ "$RELEASED" = true ] || [ "$CHANGED" = false ]; then
+                echo "::notice::$IMAGE is already published and unchanged -- skipping $LABEL"
+                continue
+              fi
+            fi
+
+            echo "$LABEL $IMAGE" >> selected.txt
+          done
+
+          CONTAINERS=$(jq -R -s -c 'split("\n") | map(select(length > 0) | split(" ")) | map({label: .[0], image: .[1]})' < selected.txt)
+          echo "containers=$CONTAINERS" >> "$GITHUB_OUTPUT"
+          echo "Building: $CONTAINERS"
+
+  build:
+    name: Build and publish (${{ matrix.container.label }})
+    needs: discover
+    if: needs.discover.outputs.containers != '[]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        container: ${{ fromJson(needs.discover.outputs.containers) }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: docker/setup-buildx-action@v3
-        if: steps.decide.outputs.build == 'true'
 
       - uses: docker/build-push-action@v6
-        if: steps.decide.outputs.build == 'true'
         with:
-          context: containers/r
+          context: containers/${{ matrix.container.label }}
           push: true
-          tags: ${{ steps.image.outputs.image }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          tags: ${{ matrix.container.image }}
+          cache-from: type=gha,scope=${{ matrix.container.label }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.container.label }}

@@ -3,7 +3,7 @@ process BAMBU_TRANSCRIPT_DISCOVERY{
     publishDir "$params.output_dir", mode: 'copy', pattern: 'unique_counts'
     publishDir "$params.output_dir", mode: 'copy', pattern: 'gene_counts'
     publishDir "$params.output_dir/intermediate_R", mode: 'copy', pattern: '*.rds', enabled: params.save_intermediates
-    label "r"
+    label "bambu"
     label "medium_cpu"
     label "high_mem"
     label "medium"
@@ -17,11 +17,11 @@ process BAMBU_TRANSCRIPT_DISCOVERY{
 	output:
     path ('quant_data.rds'), emit: quant_data
     path ('unique_counts/se_unique_counts.rds')
-    path ('gene_counts/se_gene_counts.rds'), emit: se_gene_counts
 	path ('extended_annotations.rds'), emit: extended_annotations
     path ('extended_annotations.gtf')
     path ('unique_counts')
-    path ('gene_counts')
+    path ('gene_counts'), emit: gene_counts
+    path ('col_data.rds'), emit: col_data
     path "versions.yml", topic: 'versions'
 
 	script:
@@ -54,6 +54,10 @@ process BAMBU_TRANSCRIPT_DISCOVERY{
     # Generate gene counts SE from unique counts SE
     seDiscoveryGene <- transcriptToGeneExpression(seDiscovery)
     saveCounts(seDiscoveryGene, "gene_counts")
+
+    # colData is saved to create the Seurat object's metadata
+    geneColData <- as.data.frame(colData(seDiscoveryGene))
+    saveRDS(geneColData, "col_data.rds")
 
     writeLines(c('"${task.process}":', paste0('    R: ', R.Version()\$version.string), paste0('    bambu: ', as.character(packageVersion("bambu")))), "versions.yml")
 	"""

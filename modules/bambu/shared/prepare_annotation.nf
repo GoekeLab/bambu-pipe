@@ -1,5 +1,5 @@
 process BAMBU_PREPARE_ANNOTATION{
-    label "r"
+    label "bambu"
     label "low_cpu"
     label "low_mem"
     label "short"

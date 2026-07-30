@@ -1,6 +1,6 @@
 process BAMBU_SINGLE_CELL_QUANTIFICATION {
     publishDir "$params.output_dir", mode: 'copy', pattern: 'transcript_counts_singlecell'
-    label "r"
+    label "bambu"
     label "low_cpu"
     label "high_mem"
     label "long"
