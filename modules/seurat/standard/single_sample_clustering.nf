@@ -33,7 +33,7 @@ process SEURAT_SINGLE_SAMPLE {
     cellMix <- RunPCA(cellMix, features = VariableFeatures(object = cellMix), npcs = npcs)
     dim     <- ifelse(dim >= dim(cellMix@reductions\$pca)[2], dim(cellMix@reductions\$pca)[2], dim)
     cellMix <- FindNeighbors(cellMix, dims = 1:dim)
-    cellMix <- FindClusters(cellMix, resolution = $params.resolution, cluster.name = "clusters")
+    cellMix <- FindClusters(cellMix, resolution = $params.cluster_resolution, cluster.name = "clusters")
     
     saveRDS(cellMix, "seurat_obj.rds")
 

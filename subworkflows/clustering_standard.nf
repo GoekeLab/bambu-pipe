@@ -1,5 +1,5 @@
-include { SEURAT_SINGLE_SAMPLE } from '../modules/seurat/single_sample.nf'
-include { SEURAT_MULTI_SAMPLE  } from '../modules/seurat/multi_sample.nf'
+include { SEURAT_SINGLE_SAMPLE } from '../modules/seurat/standard/single_sample_clustering.nf'
+include { SEURAT_MULTI_SAMPLE  } from '../modules/seurat/standard/multi_sample_clustering.nf'
 
 workflow CLUSTERING {
     take:

@@ -16,9 +16,13 @@ RUN micromamba install -y -n base -c conda-forge -c bioconda \
     bioconductor-dropletutils=1.30.0 \
     r-seurat=5.4.0 \
     r-harmony=2.0.2 \
+    bioconductor-banksy=1.4.0 \
     r-data.table=1.17.8 \
     gxx=15.2.0 \
     && micromamba clean --all --yes
+
+# SeuratWrappers provides RunBanksy() and is not packaged on conda
+RUN R -e 'devtools::install_github("satijalab/seurat-wrappers", upgrade = "never")'
 
 # Clone bambu single cell feature branch 
 RUN git clone --branch devel_pre_v4 \

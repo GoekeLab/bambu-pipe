@@ -145,7 +145,7 @@ To configure the executor and container, pass profile types via the `-profile` a
   - "no_quant": Transcript quantification is not performed
   - "EM": Performs transcript quantification for each cell/spatial coordinate
   - "EM_clusters": Performs gene expression-based cell clustering using [Seurat](https://satijalab.org/seurat/), followed by transcript quantification at the cluster level
-- `--resolution` [float, default: 0.8]: Seurat clustering resolution
+- `--cluster_resolution` [float, default: 0.8]: Seurat clustering resolution
 
 ### **Output**
 All outputs from the pipeline are written to the directory specified by the `--output_dir` parameter. The pipeline produces per-sample alignment files and the combined transcript discovery and quantification results. 

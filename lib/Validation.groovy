@@ -23,11 +23,87 @@ class Validation {
             throw new Exception("Invalid params.quantification_mode '${params.quantification_mode}' — must be one of: ${params.valid_quantification_modes.join(', ')}")
 
         // Numeric range checks
-        if (params.resolution <= 0)
-            throw new Exception("Invalid params.resolution '${params.resolution}' — must be a positive number")
+        if (params.cluster_resolution <= 0)
+            throw new Exception("Invalid params.cluster_resolution '${params.cluster_resolution}' — must be a positive number")
 
         if (params.ndr != null && (params.ndr < 0 || params.ndr > 1))
             throw new Exception("Invalid params.ndr '${params.ndr}' — must be a float between 0 and 1")
+
+        // Visium HD checks
+        if (params.visium_hd) {
+            if (params.bins == null)
+                throw new Exception("params.bins is required when params.visium_hd is true")
+
+            if (!params.bins.exists())
+                throw new Exception("params.bins '${params.bins}' does not exist")
+
+            if (params.bins.extension != 'csv')
+                throw new Exception("params.bins '${params.bins}' must be a CSV file")
+
+            validateVisiumHDBins(params.bins)
+
+            if (params.barcode_mappings == null)
+                throw new Exception("params.barcode_mappings is required when params.visium_hd is true")
+
+            if (!params.barcode_mappings.exists())
+                throw new Exception("params.barcode_mappings '${params.barcode_mappings}' does not exist")
+
+            if (params.barcode_mappings.extension != 'parquet')
+                throw new Exception("params.barcode_mappings '${params.barcode_mappings}' must be a .parquet file")
+
+            // only the clustering mode reads the clustering bin, so only it has to resolve
+            if (params.quantification_mode == 'EM_clusters')
+                validateClusteringBin(params.bins, params.clustering_bin)
+        }
+    }
+
+    static def validateVisiumHDRows(rows) {
+        if (rows.size() != 1)
+            throw new Exception("Visium HD requires exactly 1 sample in the samplesheet, but found ${rows.size()}")
+
+        def row = rows[0]
+        ["sample", "path"].each { col ->
+            if (!row.containsKey(col))
+                throw new Exception("Samplesheet is missing a required '${col}' column")
+            if (!row[col])
+                throw new Exception("A row in the samplesheet has an empty '${col}' value")
+        }
+
+        if (!row.path.endsWith('.bam'))
+            throw new Exception("Visium HD sample '${row.sample}' must point to a pre-aligned, barcode-tagged BAM file")
+    }
+
+    static def validateVisiumHDBins(bins) {
+        def lines = bins.text.readLines().findAll { line -> line.trim() }
+        if (lines.size() < 2)
+            throw new Exception("params.bins '${bins}' must have a header row and at least one resolution row")
+
+        def header = lines[0].split(',').collect { col -> col.trim() }
+        ["resolution", "tissue_positions"].each { col ->
+            if (!header.contains(col))
+                throw new Exception("params.bins '${bins}' is missing a required '${col}' column")
+        }
+
+        if (!readBinResolutions(bins).contains("2"))
+            throw new Exception("params.bins '${bins}' must include a row for the native 2 um resolution (resolution = 2)")
+    }
+
+    static def readBinResolutions(bins) {
+        def lines = bins.text.readLines().findAll { line -> line.trim() }
+        def header = lines[0].split(',').collect { col -> col.trim() }
+        def resIdx = header.indexOf("resolution")
+        lines[1..-1].collect { line -> line.split(',')[resIdx].trim() }
+    }
+
+    static def validateClusteringBin(bins, clusteringBin) {
+        if (clusteringBin == 2)
+            throw new Exception("Invalid params.clustering_bin '2' — 2 um bins are too sparse to cluster, choose a coarser bin")
+
+        def resolutions = readBinResolutions(bins)
+        if (!resolutions.contains(clusteringBin.toString())) {
+            def bin_options = resolutions.findAll { res -> res != "2" }
+            throw new Exception("params.clustering_bin '${clusteringBin}' is not listed in params.bins '${bins}' — available bins: ${bin_options.join(', ')}")
+        }
     }
 
     static def validateVisiumSampleCount(samples) {

@@ -50,7 +50,7 @@ process SEURAT_MULTI_SAMPLE {
 
     dim <- min(dim, ncol(cellMix[["harmony"]]))
     cellMix <- FindNeighbors(cellMix, reduction = "harmony", dims = 1:dim)
-    cellMix <- FindClusters(cellMix, resolution = $params.resolution, cluster.name = "harmony_clusters")
+    cellMix <- FindClusters(cellMix, resolution = $params.cluster_resolution, cluster.name = "harmony_clusters")
     saveRDS(cellMix, "seurat_obj.rds")
 
     clusters <- setNames(paste0("cluster_", cellMix\$harmony_clusters), names(cellMix\$harmony_clusters))

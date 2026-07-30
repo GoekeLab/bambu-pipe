@@ -29,6 +29,7 @@ process BAMBU_TRANSCRIPT_DISCOVERY{
 	#!/usr/bin/env Rscript
     if ("$params.bambu_path" == "null") { library("bambu") } else { library("devtools"); load_all("$params.bambu_path") }
     library(DropletUtils)
+    source(Sys.which("bambu_discovery.R"))
     source(Sys.which("save_counts.R"))
 
     annotation <- readRDS("$bambu_annotation")
@@ -37,28 +38,22 @@ process BAMBU_TRANSCRIPT_DISCOVERY{
     sampleData <- strsplit("${spatial_metadata_files.join(',')}", ",")[[1]]
     chemistry  <- setNames(strsplit("${meta.collect { m -> m.chemistry }.join(',')}", ",")[[1]], sampleNames)
     technology <- setNames(strsplit("${meta.collect { m -> m.technology }.join(',')}", ",")[[1]], sampleNames)
-
-    # Transcript discovery
-    extendedAnno <- bambu.singlecell(reads = readClassFile, output = "extendedAnnotations",
-    annotations = annotation, genome = "$genome", ncore = $task.cpus, verbose = FALSE, NDR = $ndr)
-    saveRDS(extendedAnno, "extended_annotations.rds")
-    writeToGTF(extendedAnno, "extended_annotations.gtf")
-
-    # Read to transcript assignment
     sampleData <- if (any(startsWith(chemistry, "visium-v"))) sampleData else NULL # Add spatial metadata for visium samples
-    quantData <- bambu.singlecell(reads = readClassFile, output = "quantData",
-    annotations = extendedAnno, genome = "$genome", ncore = $task.cpus, verbose = FALSE, sampleData = sampleData)
-    saveRDS(quantData, "quant_data.rds")
 
-    # Quantification without EM
-    seDiscovery <- bambu.singlecell(reads = quantData, output = "uniqueCounts", annotations = extendedAnno)
+    result <- bambuDiscovery(reads = readClassFile, annotation = annotation, genome = "$genome",
+        ncore = $task.cpus, ndr = $ndr, sampleData = sampleData)
+    saveRDS(result\$extendedAnno, "extended_annotations.rds")
+    writeToGTF(result\$extendedAnno, "extended_annotations.gtf")
+    saveRDS(result\$quantData, "quant_data.rds")
+
+    seDiscovery <- result\$seDiscovery
     colData(seDiscovery)\$chemistry  <- unname(chemistry[colData(seDiscovery)\$sampleName]) # Add chemistry into colData (for subsequent batch correction)
     colData(seDiscovery)\$technology <- unname(technology[colData(seDiscovery)\$sampleName]) # Add technology into colData (for subsequent batch correction)
-    save_counts(seDiscovery, "unique_counts", "Transcript Expression")
+    saveCounts(seDiscovery, "unique_counts", "Transcript Expression")
 
     # Generate gene counts SE from unique counts SE
-    seDiscovery.gene <- transcriptToGeneExpression(seDiscovery)
-    save_counts(seDiscovery.gene, "gene_counts")
+    seDiscoveryGene <- transcriptToGeneExpression(seDiscovery)
+    saveCounts(seDiscoveryGene, "gene_counts")
 
     writeLines(c('"${task.process}":', paste0('    R: ', R.Version()\$version.string), paste0('    bambu: ', as.character(packageVersion("bambu")))), "versions.yml")
 	"""
