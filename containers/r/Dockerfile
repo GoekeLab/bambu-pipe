@@ -16,7 +16,6 @@ RUN micromamba install -y -n base -c conda-forge -c bioconda \
     bioconductor-dropletutils=1.30.0 \
     r-seurat=5.4.0 \
     r-harmony=2.0.2 \
-    bioconductor-banksy=1.4.0 \
     r-data.table=1.17.8 \
     gxx=15.2.0 \
     && micromamba clean --all --yes
