@@ -11,6 +11,7 @@ ARG MAMBA_DOCKERFILE_ACTIVATE=1
 RUN micromamba install -y -n base -c conda-forge -c bioconda \
     r-base=4.5.3 \
     r-devtools=2.5.2 \
+    r-remotes=2.5.0 \
     r-biocmanager=1.30.27 \
     bioconductor-bambu=3.12.1 \
     bioconductor-dropletutils=1.30.0 \
@@ -20,8 +21,8 @@ RUN micromamba install -y -n base -c conda-forge -c bioconda \
     gxx=15.2.0 \
     && micromamba clean --all --yes
 
-# SeuratWrappers provides RunBanksy() and is not packaged on conda
-RUN R -e 'devtools::install_github("satijalab/seurat-wrappers", upgrade = "never")'
+# Install Seurat Wrappers 
+RUN R -e 'remotes::install_github("satijalab/seurat-wrappers", upgrade = "never")'
 
 # Clone bambu single cell feature branch 
 RUN git clone --branch devel_pre_v4 \
