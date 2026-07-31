@@ -16,7 +16,7 @@ RUN cd /tmp \
 RUN R -e 'install.packages("pak")'
 
 RUN R -e 'options(timeout = 1800); \
-          pak::pkg_install(c("Seurat", "harmony", "R.utils", "bioc::Banksy", \
+          pak::pkg_install(c("Seurat", "harmony", "R.utils", \
                              "github::satijalab/seurat-wrappers"))'
 
 RUN R -e 'library(Seurat); library(SeuratWrappers); library(Banksy); library(harmony); \
