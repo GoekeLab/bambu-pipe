@@ -146,6 +146,7 @@ To configure the executor and container, pass profile types via the `-profile` a
   - "EM": Performs transcript quantification for each cell/spatial coordinate
   - "EM_clusters": Performs gene expression-based cell clustering using [Seurat](https://satijalab.org/seurat/), followed by transcript quantification at the cluster level
 - `--cluster_resolution` [float, default: 0.8]: Seurat clustering resolution
+- `--manual_clustering` [boolean, default: false]: If true, skips clustering and quantifies from cluster assignments generated outside the pipeline (see Advanced Usage section)
 
 ### **Output**
 All outputs from the pipeline are written to the directory specified by the `--output_dir` parameter. The pipeline produces per-sample alignment files and the combined transcript discovery and quantification results. 
@@ -172,6 +173,9 @@ output/
 │   ├── CPM.mtx.gz
 │   ├── barcodes.tsv.gz
 │   └── features.tsv.gz
+│
+├── intermediate_R/
+│   └── quant_data.rds
 │
 │   # single-cell EM:
 ├── transcript_counts_singlecell/
@@ -218,6 +222,7 @@ output/
 | `seurat_obj.rds` | A [SeuratObject](https://satijalab.github.io/seurat-object/reference/Seurat-class.html) containing normalised counts, PCA embeddings, and cluster assignments. For multi-sample runs, also contains Harmony-integrated embeddings corrected for sequencing technology and capture chemistry. UMAP has not been computed. Only produced when `--quantification_mode` is set to `EM_clusters`.
 | `unique_counts/se_unique_counts.rds` | A [RangedSummarizedExperiment](https://www.rdocumentation.org/packages/SummarizedExperiment/versions/1.2.3/topics/RangedSummarizedExperiment-class) object containing transcript-level unique counts at single-cell resolution, produced prior to EM quantification. Columns follow the `sampleName_barcode` naming convention.
 | `gene_counts/se_gene_counts.rds` | A RangedSummarizedExperiment object containing gene-level counts at single-cell resolution. Columns follow the `sampleName_barcode` naming convention.
+| `intermediate_R/quant_data.rds` | Bambu's read-to-transcript assignments for the run. Required to restart the pipeline with `--manual_clustering`.
 | `transcript_counts_singlecell/se_transcript_counts_singlecell.rds` | A RangedSummarizedExperiment object containing per-cell transcript counts after EM quantification. Columns follow the `sampleName_barcode` naming convention. Only produced when `--quantification_mode` is set to `EM`.
 | `transcript_counts_clusters/se_transcript_counts_clusters.rds` | A RangedSummarizedExperiment object containing cluster-level transcript counts after EM quantification. Columns follow the `clusterId` naming convention for single-sample runs, and `sampleName_clusterId` for multi-sample runs. Only produced when `--quantification_mode` is set to `EM_clusters`.
 | `gene_counts_clusters/se_gene_counts_clusters.rds` | A RangedSummarizedExperiment object containing cluster-level gene counts. Columns follow the `clusterId` naming convention for single-sample runs, and `sampleName_clusterId` for multi-sample runs. Only produced when `--quantification_mode` is set to `EM_clusters`.
@@ -277,6 +282,7 @@ Example data and pre-configured profiles are provided in `examples/` to run the 
 | `test_sc_multi` | Single-cell, multiple-sample run with different chemistries and technologies |
 | `test_visium` | Spatial (Visium), single-sample ONT run from raw reads |
 | `test_custom` | Custom chemistry, single-sample ONT run from demultiplexed BAM |
+| `test_sc_quant_data` | Single-cell manual clustering run |
 
 ```bash
 # Single-cell: test from FASTQ input
@@ -293,9 +299,48 @@ nextflow run . -profile test_base,test_visium,singularity
 
 # Custom chemistry: test from demultiplexed BAM
 nextflow run . -profile test_base,test_custom,singularity
+
+# Single-cell: test clustered EM from manually generated clusters
+nextflow run . -profile test_base,test_sc_quant_data,singularity
 ```
 
 The output files from the smoke tests are written to `.smoke_test/<profile>/output/`.
+
+**Clustering Outside the Pipeline**
+
+Set `--manual_clustering` to quantify from cluster assignments you generated yourself instead of the pipeline's Seurat clustering. This is run in two stages.
+
+First, stop the pipeline after transcript discovery:
+
+```bash
+nextflow run . -profile singularity \
+  --input samplesheet.csv --genome genome.fa --annotation annotation.gtf \
+  --quantification_mode no_quant
+```
+
+Cluster the published `gene_counts/` matrix however you like, then write a `.csv` with `id` and `cluster` columns, where each `id` is a line of `gene_counts/barcodes.tsv.gz`:
+
+```csv
+id,cluster
+sample1_AAACCCAAGAAACACT-1,cluster_0
+sample1_AAACCCAAGAAACCAT-1,cluster_1
+```
+
+Then restart with a samplesheet naming that file and the first stage's `quant_data.rds`:
+
+```csv
+clusters_path,quant_data_path
+clusters.csv,output/intermediate_R/quant_data.rds
+```
+
+```bash
+nextflow run . -profile singularity \
+  --input manual_clusters.csv --genome genome.fa \
+  --annotation output/extended_annotations.gtf \
+  --manual_clustering --output_dir output_manual
+```
+
+`--annotation` takes the extended annotations from the first stage, so that quantification uses the transcripts Bambu discovered. Cells omitted from the clusters file are excluded from quantification, and cluster labels are used as given. A `.rds` holding a named vector of `id -> cluster` is accepted in place of the `.csv`.
 
 **Running Pipeline with a Custom Chemistry or Pre-aligned BAM**
 

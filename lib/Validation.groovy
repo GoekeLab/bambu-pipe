@@ -31,29 +31,37 @@ class Validation {
 
         // Visium HD checks
         if (params.visium_hd) {
-            if (params.bins == null)
-                throw new Exception("params.bins is required when params.visium_hd is true")
+            // the manual path only needs the mappings when it has to expand bins down to 2um
+            def needsBarcodeMappings = !params.manual_clustering || params.clustering_bin != 2
 
-            if (!params.bins.exists())
-                throw new Exception("params.bins '${params.bins}' does not exist")
+            if (needsBarcodeMappings) {
+                if (params.barcode_mappings == null)
+                    throw new Exception("params.barcode_mappings is required when params.visium_hd is true")
 
-            if (params.bins.extension != 'csv')
-                throw new Exception("params.bins '${params.bins}' must be a CSV file")
+                if (!params.barcode_mappings.exists())
+                    throw new Exception("params.barcode_mappings '${params.barcode_mappings}' does not exist")
 
-            validateVisiumHDBins(params.bins)
+                if (params.barcode_mappings.extension != 'parquet')
+                    throw new Exception("params.barcode_mappings '${params.barcode_mappings}' must be a .parquet file")
+            }
 
-            if (params.barcode_mappings == null)
-                throw new Exception("params.barcode_mappings is required when params.visium_hd is true")
+            // the bins samplesheet only drives the automatic path
+            if (!params.manual_clustering) {
+                if (params.bins == null)
+                    throw new Exception("params.bins is required when params.visium_hd is true")
 
-            if (!params.barcode_mappings.exists())
-                throw new Exception("params.barcode_mappings '${params.barcode_mappings}' does not exist")
+                if (!params.bins.exists())
+                    throw new Exception("params.bins '${params.bins}' does not exist")
 
-            if (params.barcode_mappings.extension != 'parquet')
-                throw new Exception("params.barcode_mappings '${params.barcode_mappings}' must be a .parquet file")
+                if (params.bins.extension != 'csv')
+                    throw new Exception("params.bins '${params.bins}' must be a CSV file")
 
-            // only the clustering mode reads the clustering bin, so only it has to resolve
-            if (params.quantification_mode == 'EM_clusters')
-                validateClusteringBin(params.bins, params.clustering_bin)
+                validateVisiumHDBins(params.bins)
+
+                // only the clustering mode reads the clustering bin, so only it has to resolve
+                if (params.quantification_mode == 'EM_clusters')
+                    validateClusteringBin(params.bins, params.clustering_bin)
+            }
         }
     }
 
@@ -96,14 +104,9 @@ class Validation {
     }
 
     static def validateClusteringBin(bins, clusteringBin) {
-        if (clusteringBin == 2)
-            throw new Exception("Invalid params.clustering_bin '2' — 2 um bins are too sparse to cluster, choose a coarser bin")
-
         def resolutions = readBinResolutions(bins)
-        if (!resolutions.contains(clusteringBin.toString())) {
-            def bin_options = resolutions.findAll { res -> res != "2" }
-            throw new Exception("params.clustering_bin '${clusteringBin}' is not listed in params.bins '${bins}' — available bins: ${bin_options.join(', ')}")
-        }
+        if (!resolutions.contains(clusteringBin.toString()))
+            throw new Exception("params.clustering_bin '${clusteringBin}' is not listed in params.bins '${bins}' — available bins: ${resolutions.join(', ')}")
     }
 
     static def validateVisiumSampleCount(samples) {

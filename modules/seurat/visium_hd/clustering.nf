@@ -6,7 +6,7 @@ process SEURAT_VISIUM_HD {
     label "long"
 
     input:
-    tuple val(resolution), path(gene_counts), path(col_data), path(spot_mappings)
+    tuple val(resolution), path(gene_counts), path(col_data)
 
     output:
     path ("clusters.rds"), emit: clusters
@@ -22,9 +22,6 @@ process SEURAT_VISIUM_HD {
 
     banksy <- as.logical("$params.banksy")
     assay  <- "Spatial.$resolution"
-
-    # Load spotMappings containing 2um barcode to bin (e.g., 8um/16um) mapping information 
-    spotMappings <- read.csv("$spot_mappings", stringsAsFactors = FALSE)
 
     # Create Seurat object with bambu's colData as its metadata
     colData      <- readRDS("$col_data")
@@ -43,12 +40,9 @@ process SEURAT_VISIUM_HD {
         object <- clusterExpression(object, assay, $params.cluster_resolution)
     }
 
-    # bambu quantifies at 2um, so map the bin level labels down to the 2um spots
-    binToClustersMap  <- setNames(paste0("cluster_", object\$clusters), names(object\$clusters))
-    spotToClustersMap <- mapSpotsToClusters(binToClustersMap, spotMappings)
-
-    # Save the 2um cluster assignment, plus the Seurat object carrying the bin level labels
-    saveRDS(spotToClustersMap, "clusters.rds")
+    # Save the cluster assignment at the clustered resolution, plus the Seurat object
+    clusters <- setNames(paste0("cluster_", object\$clusters), names(object\$clusters))
+    saveRDS(clusters, "clusters.rds")
     saveRDS(object, "seurat_obj.rds")
 
     writeLines(c(

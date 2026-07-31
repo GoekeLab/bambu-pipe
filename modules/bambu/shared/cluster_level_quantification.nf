@@ -24,9 +24,11 @@ process BAMBU_CLUSTER_LEVEL_QUANTIFICATION {
     library(DropletUtils)
     source(Sys.which("save_counts.R"))
 
-    extendedAnno <- readRDS("$extended_annotation")
+    extendedAnno <- if (endsWith("$extended_annotation", ".rds")) readRDS("$extended_annotation") else "$extended_annotation"
     quantData    <- readRDS("$quant_data")
-    clusters <- readRDS("$clusters")
+
+    # load clusters if it is a .rds file, else provide path to bambu
+    clusters <- if (endsWith("$clusters", ".rds")) readRDS("$clusters") else "$clusters"
 
     se <- bambu.singlecell(
         reads = quantData,

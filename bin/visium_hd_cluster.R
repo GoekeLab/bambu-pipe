@@ -3,14 +3,6 @@
 # Assumes Seurat is loaded by the caller, plus SeuratWrappers and Banksy
 # when the spatially aware path is used.
 
-# Seurat stores the map of bin-level barcode (e.g., 8um) -> cluster. To allow Bambu,
-# to run quantification, we have to generate the 2um barocde -> cluster map
-# as quantData is generated at the 2um resolution
-mapSpotsToClusters <- function(binToClustersMap, spotMappings) {
-    spotToClustersMap <- setNames(unname(binToClustersMap[spotMappings$sample_bin]), spotMappings$sample_barcode)
-    spotToClustersMap[!is.na(spotToClustersMap)]
-}
-
 # Spatially aware clustering using Banksy (Refer to vignette for more information)
 clusterBanksy <- function(object, assay, lambda, kGeom, clusterResolution, npcs = 30) {
     # dimx/dimy name the meta.data columns carrying each bin's coordinates

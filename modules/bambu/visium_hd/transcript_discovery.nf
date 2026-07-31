@@ -2,7 +2,9 @@ process BAMBU_TRANSCRIPT_DISCOVERY_VISIUM_HD {
     publishDir "$params.output_dir", mode: 'copy', pattern: 'extended_annotations.gtf'
     publishDir "$params.output_dir/unique_counts", mode: 'copy', pattern: 'unique_counts_002um'
     publishDir "$params.output_dir/gene_counts", mode: 'copy', pattern: 'gene_counts_002um'
-    publishDir "$params.output_dir/intermediate_R", mode: 'copy', pattern: '*.rds', enabled: params.save_intermediates
+    publishDir "$params.output_dir/intermediate_R", mode: 'copy', pattern: 'quant_data.rds' // published unconditionally so a manual clustering run can restart from it
+    publishDir "$params.output_dir/intermediate_R", mode: 'copy', pattern: 'extended_annotations.rds', enabled: params.save_intermediates
+    publishDir "$params.output_dir/intermediate_R", mode: 'copy', pattern: 'col_data_002um.rds', enabled: params.save_intermediates
     label "bambu"
     label "medium_cpu"
     label "high_mem"
@@ -20,9 +22,10 @@ process BAMBU_TRANSCRIPT_DISCOVERY_VISIUM_HD {
     path ('extended_annotations.rds'), emit: extended_annotations
     path ('extended_annotations.gtf')
     path ('unique_counts_002um')
-    path ('gene_counts_002um')
+    path ('gene_counts_002um'), emit: gene_counts_002um
     path ('unique_counts_002um/se_unique_counts_002um.rds'), emit: se_unique_002um
     path ('unique_counts_002um/barcodes.tsv.gz'), emit: barcodes_002um
+    path ('col_data_002um.rds'), emit: col_data_002um
     path "versions.yml", topic: 'versions'
 
     script:
@@ -48,6 +51,10 @@ process BAMBU_TRANSCRIPT_DISCOVERY_VISIUM_HD {
 
     saveCounts(unique002um, "unique_counts_002um", "Transcript Expression")
     saveCounts(gene002um,   "gene_counts_002um")
+
+    # colData is saved to create the Seurat object's metadata
+    spotColData <- as.data.frame(colData(gene002um))
+    saveRDS(spotColData, "col_data_002um.rds")
 
     writeLines(c('"${task.process}":', paste0('    R: ', R.Version()\$version.string), paste0('    bambu: ', as.character(packageVersion("bambu")))), "versions.yml")
     """
