@@ -11,15 +11,13 @@ RUN cd /tmp \
     && git clone --depth 1 https://codeberg.org/jaganmn/Matrix.git \
     && R CMD INSTALL --no-docs Matrix \
     && rm -rf /tmp/Matrix
-    
+
 # pak resolves system requirements automatically, so no hand-maintained apt list
 RUN R -e 'install.packages("pak")'
 
 RUN R -e 'options(timeout = 1800); \
-          pak::pkg_install(c("Seurat", "harmony", "bioc::Banksy"))'
-
-RUN R -e 'options(timeout = 600); \
-          pak::pkg_install("github::satijalab/seurat-wrappers")'
+          pak::pkg_install(c("Seurat", "harmony", "R.utils", "bioc::Banksy", \
+                             "github::satijalab/seurat-wrappers"))'
 
 RUN R -e 'library(Seurat); library(SeuratWrappers); library(Banksy); library(harmony); \
           stopifnot(packageVersion("Matrix") >= "1.8-0")'
