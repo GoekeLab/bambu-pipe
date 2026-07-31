@@ -9,8 +9,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install Banksy
 RUN R -e 'if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager"); \
-          BiocManager::install("Banksy", version = "3.23", update = FALSE, ask = FALSE)'
-          
+          BiocManager::install("Banksy", version = "3.20", update = FALSE, ask = FALSE)'
+
 # Install Seurat Wrappers
 RUN R -e 'options(timeout = 600); remotes::install_github("satijalab/seurat-wrappers", upgrade = "never")' \
     && R -e 'library(SeuratWrappers); library(Banksy); library(harmony)'
