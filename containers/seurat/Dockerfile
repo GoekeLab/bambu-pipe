@@ -9,11 +9,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Refer to BANKSY issue: https://github.com/prabhakarlab/Banksy/issues/76 (removed when fixed)
 RUN cd /tmp \
     && git clone --depth 1 https://codeberg.org/jaganmn/Matrix.git \
-    && R CMD build Matrix \
-    && R CMD INSTALL Matrix_*.tar.gz \
-    && R -e 'stopifnot(packageVersion("Matrix") >= "1.8-0")' \
-    && rm -rf /tmp/Matrix /tmp/Matrix_*.tar.gz
-
+    && R CMD INSTALL --no-docs Matrix \
+    && rm -rf /tmp/Matrix
+    
 # pak resolves system requirements automatically, so no hand-maintained apt list
 RUN R -e 'install.packages("pak")'
 
