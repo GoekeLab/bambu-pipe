@@ -7,10 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         procps libmagick++-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Banksy
-RUN R -e 'if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager"); \
-          BiocManager::install("Banksy", version = "3.20", update = FALSE, ask = FALSE)'
-
-# Install Seurat Wrappers
-RUN R -e 'options(timeout = 600); remotes::install_github("satijalab/seurat-wrappers", upgrade = "never")' \
+# Install Seurat Wrappers, plus Banksy for spatially aware clustering (Banksy is only a
+# suggested dependency of Seurat Wrappers, so it is not installed alongside it)
+RUN R -e 'options(timeout = 600); remotes::install_github("satijalab/seurat-wrappers", upgrade = "TRUE")' \
     && R -e 'library(SeuratWrappers); library(Banksy); library(harmony)'
