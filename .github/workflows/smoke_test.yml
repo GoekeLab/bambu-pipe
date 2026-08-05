@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   smoke_test:
-    name: "${{ matrix.profile }} (NF ${{ matrix.nextflow_version }})${{ matrix.quantification_mode && format(' [{0}]', matrix.quantification_mode) || '' }}${{ matrix.bam_only && ' [bam_only]' || '' }}"
+    name: "${{ matrix.profile }} (NF ${{ matrix.nextflow_version }})${{ matrix.quantification_mode && format(' [{0}]', matrix.quantification_mode) || '' }}${{ matrix.bam_only && ' [bam_only]' || '' }}${{ matrix.extra_args && format(' [{0}]', matrix.extra_args) || '' }}"
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -21,18 +21,24 @@ jobs:
           - {nextflow_version: "26.04.0", profile: test_sc_bam}
           - {nextflow_version: "26.04.0", profile: test_sc_multi}
           - {nextflow_version: "26.04.0", profile: test_visium}
+          - {nextflow_version: "26.04.0", profile: test_visium_hd}
           - {nextflow_version: "26.04.0", profile: test_custom}
           - {nextflow_version: "26.04.0", profile: test_sc_quant_data}
-          # latest-stable - all profiles (default EM_clusters)
+          - {nextflow_version: "26.04.0", profile: test_visium_hd_quant_data}
+          # latest-stable - all profiles (default clusteredEM)
           - {nextflow_version: "latest-stable", profile: test_sc_fastq}
           - {nextflow_version: "latest-stable", profile: test_sc_bam}
           - {nextflow_version: "latest-stable", profile: test_sc_multi}
           - {nextflow_version: "latest-stable", profile: test_visium}
+          - {nextflow_version: "latest-stable", profile: test_visium_hd}
           - {nextflow_version: "latest-stable", profile: test_custom}
           - {nextflow_version: "latest-stable", profile: test_sc_quant_data}
+          - {nextflow_version: "latest-stable", profile: test_visium_hd_quant_data}
           # latest-stable - extra parameter variants
           - {nextflow_version: "latest-stable", profile: test_sc_fastq, quantification_mode: EM}
           - {nextflow_version: "latest-stable", profile: test_sc_multi, quantification_mode: EM}
+          - {nextflow_version: "latest-stable", profile: test_visium_hd, quantification_mode: EM}
+          - {nextflow_version: "latest-stable", profile: test_visium_hd, extra_args: "--banksy false"}
           - {nextflow_version: "latest-stable", profile: test_sc_fastq, quantification_mode: no_quant}
           - {nextflow_version: "latest-stable", profile: test_sc_fastq, bam_only: true}
     steps:
@@ -44,4 +50,5 @@ jobs:
         run: |
           nextflow run . -profile test_base,${{ matrix.profile }},docker \
             ${{ matrix.quantification_mode && format('--quantification_mode {0}', matrix.quantification_mode) || '' }} \
-            ${{ matrix.bam_only && '--bam_only' || '' }}
+            ${{ matrix.bam_only && '--bam_only' || '' }} \
+            ${{ matrix.extra_args || '' }}

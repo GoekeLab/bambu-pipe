@@ -38,7 +38,7 @@ params {
     ndr: Float?
     deduplicate_umis: Boolean
     quantification_mode: String
-    cluster_resolution: Float
+    seurat_resolution: Float
     visium_hd: Boolean
     barcode_mappings: Path?
     bins: Path?
@@ -97,7 +97,7 @@ workflow STANDARD {
             BAMBU_TRANSCRIPT_DISCOVERY(ch_rds_files_collect, ch_genome, BAMBU_PREPARE_ANNOTATION.out.annotation, ndrArg)
 
             // cluster the cells first, then pool each cluster's cells for the EM
-            if (params.quantification_mode == 'EM_clusters') {
+            if (params.quantification_mode == 'clusteredEM') {
                 CLUSTERING(BAMBU_TRANSCRIPT_DISCOVERY.out.gene_counts, BAMBU_TRANSCRIPT_DISCOVERY.out.col_data, ch_n_samples)
                 BAMBU_CLUSTER_LEVEL_QUANTIFICATION(CLUSTERING.out.clusters, BAMBU_TRANSCRIPT_DISCOVERY.out.quant_data, BAMBU_TRANSCRIPT_DISCOVERY.out.extended_annotations, ch_genome)
             } else if (params.quantification_mode == 'EM') {
@@ -148,7 +148,7 @@ workflow VISIUM_HD {
         // aggregate the 2um SEs into each requested bin resolution (e.g., 8um/16um)
         AGGREGATE_BINS_VISIUM_HD(ch_bins, ch_unique_002um)
 
-        if (params.quantification_mode == 'EM_clusters') {
+        if (params.quantification_mode == 'clusteredEM') {
             // the 2um counts come straight from transcript discovery, every coarser bin from the aggregated SEs
             ch_counts_002um = BAMBU_TRANSCRIPT_DISCOVERY_VISIUM_HD.out.gene_counts_002um
                 .combine(BAMBU_TRANSCRIPT_DISCOVERY_VISIUM_HD.out.col_data_002um)

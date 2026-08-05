@@ -2,8 +2,9 @@ process BAMBU_TRANSCRIPT_DISCOVERY{
     publishDir "$params.output_dir", mode: 'copy', pattern: 'extended_annotations.gtf'
     publishDir "$params.output_dir", mode: 'copy', pattern: 'unique_counts'
     publishDir "$params.output_dir", mode: 'copy', pattern: 'gene_counts'
-    publishDir "$params.output_dir/intermediate_R", mode: 'copy', pattern: 'quant_data.rds' // published unconditionally so a manual clustering run can restart from it
-    publishDir "$params.output_dir/intermediate_R", mode: 'copy', pattern: 'extended_annotations.rds', enabled: params.save_intermediates
+    // published unconditionally so a manual clustering run can restart from them
+    publishDir "$params.output_dir/intermediate_R", mode: 'copy', pattern: 'quant_data.rds'
+    publishDir "$params.output_dir/intermediate_R", mode: 'copy', pattern: 'extended_annotations.rds'
     publishDir "$params.output_dir/intermediate_R", mode: 'copy', pattern: 'col_data.rds', enabled: params.save_intermediates
     label "bambu"
     label "medium_cpu"

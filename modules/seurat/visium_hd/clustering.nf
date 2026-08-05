@@ -35,9 +35,9 @@ process SEURAT_VISIUM_HD {
     if (banksy) {
         library(SeuratWrappers)
         library(Banksy)
-        object <- clusterBanksy(object, assay, $params.banksy_lambda, $params.banksy_k_geom, $params.cluster_resolution)
+        object <- clusterBanksy(object, assay, $params.banksy_lambda, $params.banksy_k_geom, $params.seurat_resolution)
     } else {
-        object <- clusterExpression(object, assay, $params.cluster_resolution)
+        object <- clusterExpression(object, assay, $params.seurat_resolution)
     }
 
     # Save the cluster assignment at the clustered resolution, plus the Seurat object

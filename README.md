@@ -4,8 +4,10 @@
 - [Installation](#installation)
 - [General Usage](#general-usage)
 - [Parameters](#parameters)
-- [Output](#output)
 - [Spatial Analysis](#spatial-analysis)
+  - [Visium Spatial Gene Expression](#visium-spatial-gene-expression)
+  - [Visium HD](#visium-hd)
+- [Output](#output)
 - [Advanced Usage](#advanced-usage)
 - [Additional Information](#additional-information)
 - [Release History](#release-history)
@@ -32,7 +34,7 @@ This pipeline performs context-aware transcript discovery and quantification fro
 5. Read class construction and transcript discovery with [Bambu](https://github.com/GoekeLab/bambu/tree/BambuDev) (performed jointly across all samples)
 6. (Optional) Transcript quantification with Bambu using one of two modes:
    - Cluster-level EM: Gene expression-based cell clustering with [Seurat](https://github.com/satijalab/seurat) across all samples, followed by per-sample cluster-level transcript quantification
-   - Single-cell EM: Per-cell transcript quantification 
+   - Single-cell EM: Transcript quantification for each cell, or for each spot in spatial samples
 
 ### **Installation** 
 Install the following dependencies before running the pipeline:
@@ -106,11 +108,15 @@ For the following chemistries, the pipeline handles the full workflow — FASTQ 
 - `visium-v4` (Visium CytAssist Spatial Gene Expression Slide 6.5 mm; serial prefix V4)
 - `visium-v5` (Visium CytAssist Spatial Gene Expression Slide 11mm; serial prefix V5)
 
-> **Note:** Visium samples must be run one sample at a time. Multi-sample runs are not supported for Visium chemistries.
+> **Note:** Visium Spatial Gene Expression samples (`visium-v*`) must be run one at a time. Multi-sample runs are not supported for these chemistries.
 
-*Custom Chemistry*
+*Custom Chemistries*
 
 If your dataset uses a chemistry not listed above, or if you prefer to handle FASTQ preprocessing and genome alignment manually, provide a pre-processed, demultiplexed BAM file as input. See the [Advanced Usage](#advanced-usage) section for details.
+
+*Visium HD*
+
+The pipeline also supports Visium HD samples. See the [Visium HD](#visium-hd) section for more details.
 
 **Pipeline Configuration**
 
@@ -131,7 +137,7 @@ To configure the executor and container, pass profile types via the `-profile` a
 **Mandatory**
 - `--input` [string]: Path to the samplesheet `.csv` file 
 - `--genome` [string]: Path to the reference genome `.fa`, `.fasta`, or `.fa.gz` file 
-- `--annotation` [string]: Path to the reference annotation `.gtf`, `.gff`, `.gtf.gz`, or `.gff.gz` file 
+- `--annotation` [string]: Path to the reference annotation `.gtf`, `.gff`, `.gtf.gz`, or `.gff.gz` file. When restarting the pipeline with `--manual_clustering`, provide the `extended_annotations.rds` file instead 
 
 **Optional**
 - `--output_dir` [string, default: 'output']: Path to the output directory
@@ -141,12 +147,100 @@ To configure the executor and container, pass profile types via the `-profile` a
 - `--qscore_filtering` [boolean, default: true]: Enable or disable quality score filtering of reads
 - `--ndr` [float, default: null]: NDR threshold for Bambu transcript discovery. If not set, Bambu will recommend a suitable value
 - `--deduplicate_umis` [boolean, default: true]: If true, Bambu will perform UMI deduplication 
-- `--quantification_mode` [string, default: "EM_clusters"]: Quantification mode for transcript counts. Available options are:
+- `--quantification_mode` [string, default: "clusteredEM"]: Quantification mode for transcript counts. Available options are:
   - "no_quant": Transcript quantification is not performed
   - "EM": Performs transcript quantification for each cell/spatial coordinate
-  - "EM_clusters": Performs gene expression-based cell clustering using [Seurat](https://satijalab.org/seurat/), followed by transcript quantification at the cluster level
-- `--cluster_resolution` [float, default: 0.8]: Seurat clustering resolution
+  - "clusteredEM": Performs gene expression-based cell clustering using [Seurat](https://satijalab.org/seurat/), followed by transcript quantification at the cluster level
+- `--seurat_resolution` [float, default: 0.8]: Seurat clustering resolution
 - `--manual_clustering` [boolean, default: false]: If true, skips clustering and quantifies from cluster assignments generated outside the pipeline (see Advanced Usage section)
+
+**Visium HD**
+
+See the [Visium HD](#visium-hd) section for the required input files and samplesheet format.
+- `--visium_hd` [boolean, default: false]: Enable the Visium HD workflow
+- `--bins` [string, default: null]: Path to a `.csv` listing the resolutions to quantify. Required when `--visium_hd` is set
+- `--barcode_mappings` [string, default: null]: Path to the Spaceranger `barcode_mappings.parquet`. Required when `--visium_hd` is set
+- `--clustering_bin` [integer, default: 8]: Bin size (µm) to cluster at. Must be listed in `--bins`
+- `--banksy` [boolean, default: true]: If true, clusters with [Banksy](https://github.com/prabhakarlab/Banksy) using both expression and spatial position. If false, clusters on gene expression alone
+- `--banksy_lambda` [float, default: 0.8]: Weight given to spatial information
+- `--banksy_k_geom` [integer, default: 50]: Number of spatial neighbours per bin
+
+### **Spatial Analysis**
+
+#### **Visium Spatial Gene Expression**
+The pipeline applies the same processing steps to both 10x Single Cell and Visium Spatial Gene Expression (`visium-v*`) samples. The only difference is that the generated `SummarizedExperiment` objects are attached with spatial mapping information, which is stored in `colData`.
+
+*Example: Spatial Mapping Information*
+
+In the `SummarizedExperiment` object, each row in `colData` contains a spatial barcode together with its X and Y coordinates on the slide. 
+
+| barcode            | x_coordinate | y_coordinate | 
+|:---|:---|:---|
+| AAACAACGAATAGTTC | 17 | 1 |
+| AAACAAGTATCTCCCA  | 103 | 51 |
+| AAACAATCTACTAGCA | 44 | 4 |
+
+
+#### **Visium HD**
+
+This pipeline does not demultiplex Visium HD reads. Barcode assignment and alignment must be performed beforehand using one of the following tools, and the resulting BAM file supplied in the samplesheet:
+
+- [Percula](https://epi2me.nanoporetech.com/epi2me-docs/tools/percula/) for ONT reads
+- [visium-hd-long-reads](https://github.com/10XGenomics/visium-hd-long-reads) for PacBio reads
+
+*Required Input Files*
+
+Alongside the BAM file, Visium HD runs require two Spaceranger outputs:
+
+| Spaceranger output | Description |
+|---|---|
+| `tissue_positions.parquet` | One file per resolution, from `binned_outputs/square_XXXum/spatial/`|
+| `barcode_mappings.parquet` | Maps each 2 µm barcode to its bin at every resolution |
+
+For more information, please refer to the [Space Ranger Spatial Outputs](https://www.10xgenomics.com/support/software/space-ranger/latest/analysis/outputs/spatial-outputs) documentation.
+
+*Samplesheet (CSV)*
+
+Visium HD runs take exactly one sample and only needs the `sample` and `path` columns in the input samplesheet. 
+```csv
+sample,path
+visium_hd_example,examples/visium_hd_example.bam
+```
+
+*Bins Samplesheet (CSV)*
+
+Visium HD captures data at 2 µm resolution, which can be aggregated into larger square bins (e.g. 8 µm or 16 µm). In this pipeline, count matrices are generated at every resolution specified. To specify the resolutions for aggregation, supply a `.csv` file to `--bins`:
+
+```csv
+resolution,tissue_positions
+2,binned_outputs/square_002um/spatial/tissue_positions.parquet
+8,binned_outputs/square_008um/spatial/tissue_positions.parquet
+16,binned_outputs/square_016um/spatial/tissue_positions.parquet
+```
+
+The samplesheet must contain two columns: `resolution`, the bin size in µm, and `tissue_positions`, the path to that resolution's `tissue_positions.parquet` file. A row for the 2 µm resolution is required.
+
+*Running the pipeline*
+
+```bash
+nextflow run main.nf \
+  --input samplesheet_visium_hd.csv \
+  --genome examples/GRCh38.primary_assembly.genome.chr21.fa.gz \
+  --annotation examples/gencode.v49.primary_assembly.annotation.chr21.gtf.gz \
+  --visium_hd \
+  --bins bins.csv \
+  --barcode_mappings barcode_mappings.parquet \
+  --clustering_bin 8 \
+  -profile singularity,hpc
+```
+
+For more information on the Visium HD parameters, please refer to the [Parameters](#parameters) section.
+
+*Clustering*
+
+Clustering is performed at a single resolution only, set by `--clustering_bin`, when `--quantification_mode` is set to `clusteredEM`. By default it uses Seurat with [Banksy](https://github.com/prabhakarlab/Banksy), which combines gene expression with spatial position. Set `--banksy false` to cluster on gene expression alone.
+
+When clustering is skipped under `--quantification_mode EM` (i.e., spot-level EM), transcript counts are produced at every resolution listed in `--bins`.
 
 ### **Output**
 All outputs from the pipeline are written to the directory specified by the `--output_dir` parameter. The pipeline produces per-sample alignment files and the combined transcript discovery and quantification results. 
@@ -154,6 +248,14 @@ All outputs from the pipeline are written to the directory specified by the `--o
 *Output Structure*
 ```
 output/
+├── software_versions.yml
+│
+├── pipeline_info/
+│   ├── execution_timeline.html
+│   ├── execution_report.html
+│   ├── execution_trace.txt
+│   └── pipeline_dag.svg
+│
 ├── bam/                                
 │   ├── <sample>_demultiplexed.bam
 │   └── <sample>_demultiplexed.bam.bai
@@ -175,9 +277,10 @@ output/
 │   └── features.tsv.gz
 │
 ├── intermediate_R/
-│   └── quant_data.rds
+│   ├── quant_data.rds
+│   └── extended_annotations.rds
 │
-│   # single-cell EM:
+│   # --quantification_mode EM:
 ├── transcript_counts_singlecell/
 │   ├── se_transcript_counts_singlecell.rds
 │   ├── counts.mtx.gz
@@ -187,8 +290,9 @@ output/
 │   ├── barcodes.tsv.gz
 │   └── features.tsv.gz
 │
-│   # cluster-level EM:
+│   # --quantification_mode clusteredEM:
 ├── seurat_obj.rds
+│
 ├── transcript_counts_clusters/
 │   ├── se_transcript_counts_clusters.rds
 │   ├── counts.mtx.gz
@@ -197,20 +301,48 @@ output/
 │   ├── uniqueCounts.mtx.gz
 │   ├── barcodes.tsv.gz
 │   └── features.tsv.gz
-├── gene_counts_clusters/
-│   ├── se_gene_counts_clusters.rds
-│   ├── counts.mtx.gz
-│   ├── CPM.mtx.gz
-│   ├── barcodes.tsv.gz
-│   └── features.tsv.gz
+│
+└── gene_counts_clusters/
+    ├── se_gene_counts_clusters.rds
+    ├── counts.mtx.gz
+    ├── CPM.mtx.gz
+    ├── barcodes.tsv.gz
+    └── features.tsv.gz
+```
+
+*Output Structure (Visium HD)*
+
+Visium HD runs write the count matrices for each resolution specified in the `.csv` provided to `--bins`. Each count directory holds the same files as above (`se_*.rds`, `counts.mtx.gz`, `barcodes.tsv.gz`, `features.tsv.gz`, and any additional assays).
+
+```
+output/
+├── software_versions.yml
 │
 ├── pipeline_info/
-│   ├── execution_timeline.html
-│   ├── execution_report.html
-│   ├── execution_trace.txt
-│   └── pipeline_dag.svg
 │
-└── software_versions.yml
+├── extended_annotations.gtf
+│
+├── unique_counts/
+│   ├── unique_counts_002um/
+│   └── unique_counts_<res>/
+│
+├── gene_counts/
+│   ├── gene_counts_002um/
+│   └── gene_counts_<res>/
+│
+├── intermediate_R/
+│   ├── quant_data.rds
+│   └── extended_annotations.rds
+│
+│   # --quantification_mode EM:
+├── transcript_counts/
+│   ├── transcript_counts_002um/
+│   └── transcript_counts_<res>/
+│
+│   # --quantification_mode clusteredEM:
+├── seurat_obj.rds
+├── transcript_counts_clusters/
+└── gene_counts_clusters/
 ```
 
 **Description of the Output Files**
@@ -219,13 +351,17 @@ output/
 | `<sample>_demultiplexed.bam` | BAM file containing demultiplexed, trimmed and aligned reads
 | `<sample>_demultiplexed.bam.bai` | BAM index for the corresponding BAM file
 | `extended_annotations.gtf` | A `.gtf` file containing the novel transcripts discovered by Bambu as well as the reference annotations provided by the user.
-| `seurat_obj.rds` | A [SeuratObject](https://satijalab.github.io/seurat-object/reference/Seurat-class.html) containing normalised counts, PCA embeddings, and cluster assignments. For multi-sample runs, also contains Harmony-integrated embeddings corrected for sequencing technology and capture chemistry. UMAP has not been computed. Only produced when `--quantification_mode` is set to `EM_clusters`.
+| `seurat_obj.rds` | A [SeuratObject](https://satijalab.github.io/seurat-object/reference/Seurat-class.html) containing normalised counts, PCA embeddings, and cluster assignments. For multi-sample runs, also contains Harmony-integrated embeddings corrected for sequencing technology and capture chemistry. For Visium HD runs, holds the bins of the `--clustering_bin` resolution and, with `--banksy`, the BANKSY assay and embeddings. UMAP has not been computed. Only produced when `--quantification_mode` is set to `clusteredEM`.
 | `unique_counts/se_unique_counts.rds` | A [RangedSummarizedExperiment](https://www.rdocumentation.org/packages/SummarizedExperiment/versions/1.2.3/topics/RangedSummarizedExperiment-class) object containing transcript-level unique counts at single-cell resolution, produced prior to EM quantification. Columns follow the `sampleName_barcode` naming convention.
 | `gene_counts/se_gene_counts.rds` | A RangedSummarizedExperiment object containing gene-level counts at single-cell resolution. Columns follow the `sampleName_barcode` naming convention.
 | `intermediate_R/quant_data.rds` | Bambu's read-to-transcript assignments for the run. Required to restart the pipeline with `--manual_clustering`.
+| `intermediate_R/extended_annotations.rds` | The extended annotations as a GRangesList. Required to restart the pipeline with `--manual_clustering`.
 | `transcript_counts_singlecell/se_transcript_counts_singlecell.rds` | A RangedSummarizedExperiment object containing per-cell transcript counts after EM quantification. Columns follow the `sampleName_barcode` naming convention. Only produced when `--quantification_mode` is set to `EM`.
-| `transcript_counts_clusters/se_transcript_counts_clusters.rds` | A RangedSummarizedExperiment object containing cluster-level transcript counts after EM quantification. Columns follow the `clusterId` naming convention for single-sample runs, and `sampleName_clusterId` for multi-sample runs. Only produced when `--quantification_mode` is set to `EM_clusters`.
-| `gene_counts_clusters/se_gene_counts_clusters.rds` | A RangedSummarizedExperiment object containing cluster-level gene counts. Columns follow the `clusterId` naming convention for single-sample runs, and `sampleName_clusterId` for multi-sample runs. Only produced when `--quantification_mode` is set to `EM_clusters`.
+| `transcript_counts_clusters/se_transcript_counts_clusters.rds` | A RangedSummarizedExperiment object containing cluster-level transcript counts after EM quantification. Columns follow the `clusterId` naming convention for single-sample runs, and `sampleName_clusterId` for multi-sample runs. Only produced when `--quantification_mode` is set to `clusteredEM`.
+| `gene_counts_clusters/se_gene_counts_clusters.rds` | A RangedSummarizedExperiment object containing cluster-level gene counts. Columns follow the `clusterId` naming convention for single-sample runs, and `sampleName_clusterId` for multi-sample runs. Only produced when `--quantification_mode` is set to `clusteredEM`.
+| `unique_counts/unique_counts_<res>/` | Visium HD only. Transcript-level unique counts at resolution `<res>`, produced prior to EM quantification. Columns follow the `sampleName_barcode` naming convention.
+| `gene_counts/gene_counts_<res>/` | Visium HD only. Gene-level counts at resolution `<res>`.
+| `transcript_counts/transcript_counts_<res>/` | Visium HD only. Transcript counts after EM quantification, one directory per resolution. Only produced when `--quantification_mode` is set to `EM`.
 | `<assay>.mtx.gz` | Gzip-compressed sparse count matrix in [Matrix Market Exchange](https://math.nist.gov/MatrixMarket/formats.html) format (features × barcodes), one per assay present in the `SummarizedExperiment` (`counts.mtx.gz`, `CPM.mtx.gz`, `fullLengthCounts.mtx.gz`, `uniqueCounts.mtx.gz`). See the **Count Matrices** section below for what each assay contains.
 | `barcodes.tsv.gz` | Gzip-compressed list of cell barcodes (one per line) corresponding to the columns of each `.mtx.gz`. Barcodes follow the `sampleName_barcode` naming convention for multi-sample runs.
 | `features.tsv.gz` | Gzip-compressed three-column TSV corresponding to the rows of each `.mtx.gz`. Column 1 is the feature ID (transcript ID for transcript-level matrices, gene ID for gene-level matrices). Column 2 is the feature name (same as column 1). Column 3 is the feature type (`Transcript Expression` for transcript-level matrices, `Gene Expression` for gene-level matrices).
@@ -246,101 +382,11 @@ The [RangedSummarizedExperiment](https://www.rdocumentation.org/packages/Summari
 > **Note:** In `se_unique_counts.rds`, unique counts are stored under the `counts` assay, not `uniqueCounts`.
 
 
-### **Spatial Analysis**
-The pipeline applies the same processing steps to both single-cell and spatial samples. However, for spatial data, the generated `SummarizedExperiment` object is appended with spatial mapping information, which is stored in `colData`.  
-
-**Example - Spatial Mapping Information (`visium-v*`)**:
-
-For `visium-v*` samples, `colData` contains the spatial barcode and the corresponding X and Y spatial coordinates. 
-
-| barcode            | x_coordinate | y_coordinate | 
-|:---|:---|:---|
-| AAACAACGAATAGTTC | 17 | 1 |
-| AAACAAGTATCTCCCA  | 103 | 51 |
-| AAACAATCTACTAGCA | 44 | 4 |
-
-
-### **Visium HD Spatial Analysis (Under Development)**
-
-This feature is still under development and will be released in a future update.
-
-
 ### **Fusion Transcript Analysis (Under Development)**
 This feature is still under development and will be released in a future update.
 
 
 ### **Advanced Usage**
-
-**Minimal End-to-End Smoke Test**
-
-Example data and pre-configured profiles are provided in `examples/` to run the pipeline end-to-end automatically without preparing your own data. The commands below must be run from the project's root directory. Combine the profile `test_base` with one of the profiles below and a container profile (`singularity` or `docker`).
-
-| Profile | Description |
-|---|---|
-| `test_sc_fastq` | Single-cell, single-sample ONT run from raw reads |
-| `test_sc_bam` | Single-cell, single-sample ONT run from demultiplexed BAM |
-| `test_sc_multi` | Single-cell, multiple-sample run with different chemistries and technologies |
-| `test_visium` | Spatial (Visium), single-sample ONT run from raw reads |
-| `test_custom` | Custom chemistry, single-sample ONT run from demultiplexed BAM |
-| `test_sc_quant_data` | Single-cell manual clustering run |
-
-```bash
-# Single-cell: test from FASTQ input
-nextflow run . -profile test_base,test_sc_fastq,singularity
-
-# Single-cell: test from BAM input
-nextflow run . -profile test_base,test_sc_bam,singularity
-
-# Single-cell: test with multiple samples (ONT + PacBio)
-nextflow run . -profile test_base,test_sc_multi,singularity
-
-# Spatial: test Visium from FASTQ input
-nextflow run . -profile test_base,test_visium,singularity
-
-# Custom chemistry: test from demultiplexed BAM
-nextflow run . -profile test_base,test_custom,singularity
-
-# Single-cell: test clustered EM from manually generated clusters
-nextflow run . -profile test_base,test_sc_quant_data,singularity
-```
-
-The output files from the smoke tests are written to `.smoke_test/<profile>/output/`.
-
-**Clustering Outside the Pipeline**
-
-Set `--manual_clustering` to quantify from cluster assignments you generated yourself instead of the pipeline's Seurat clustering. This is run in two stages.
-
-First, stop the pipeline after transcript discovery:
-
-```bash
-nextflow run . -profile singularity \
-  --input samplesheet.csv --genome genome.fa --annotation annotation.gtf \
-  --quantification_mode no_quant
-```
-
-Cluster the published `gene_counts/` matrix however you like, then write a `.csv` with `id` and `cluster` columns, where each `id` is a line of `gene_counts/barcodes.tsv.gz`:
-
-```csv
-id,cluster
-sample1_AAACCCAAGAAACACT-1,cluster_0
-sample1_AAACCCAAGAAACCAT-1,cluster_1
-```
-
-Then restart with a samplesheet naming that file and the first stage's `quant_data.rds`:
-
-```csv
-clusters_path,quant_data_path
-clusters.csv,output/intermediate_R/quant_data.rds
-```
-
-```bash
-nextflow run . -profile singularity \
-  --input manual_clusters.csv --genome genome.fa \
-  --annotation output/extended_annotations.gtf \
-  --manual_clustering --output_dir output_manual
-```
-
-`--annotation` takes the extended annotations from the first stage, so that quantification uses the transcripts Bambu discovered. Cells omitted from the clusters file are excluded from quantification, and cluster labels are used as given. A `.rds` holding a named vector of `id -> cluster` is accepted in place of the `.csv`.
 
 **Running Pipeline with a Custom Chemistry or Pre-aligned BAM**
 
@@ -418,18 +464,102 @@ DimPlot(obj, reduction = "umap", group.by = "harmony_clusters", label = TRUE)
 DimPlot(obj, reduction = "umap", group.by = "sample")
 ```
 
-**Manual Clustering (Under Development)**
+**Clustering Outside the Pipeline**
 
-Currently, cell clustering is performed automatically as part of the pipeline. In a future release, a tutorial will be provided that allows users to stop the pipeline after transcript discovery, perform their own custom clustering, and then resume the pipeline to run Bambu transcript quantification using their cluster assignments.
+Set `--manual_clustering` to quantify from cluster assignments you generated yourself instead of the pipeline's Seurat clustering. This is done in two stages.
+
+First, stop the pipeline after transcript discovery:
+
+```bash
+nextflow run . -profile singularity \
+  --input samplesheet.csv --genome genome.fa --annotation annotation.gtf \
+  --quantification_mode no_quant
+```
+
+Cluster the published `gene_counts/` matrix however you like, then write a `.csv` with `id` and `cluster` columns, where each `id` is a line of `gene_counts/barcodes.tsv.gz`:
+
+```csv
+id,cluster
+sample1_AAACCCAAGAAACACT-1,cluster_0
+sample1_AAACCCAAGAAACCAT-1,cluster_1
+```
+
+Next, restart the pipeline. The samplesheet supplied to `--input` must contain two columns: `clusters_path`, the cluster assignment file, and `quant_data_path`, the `quant_data.rds` written to `intermediate_R/` by the first stage.
+
+```csv
+clusters_path,quant_data_path
+clusters.csv,output/intermediate_R/quant_data.rds
+```
+
+```bash
+nextflow run . -profile singularity \
+  --input manual_clusters.csv --genome genome.fa \
+  --annotation output/intermediate_R/extended_annotations.rds \
+  --manual_clustering --output_dir output_manual
+```
+
+`--annotation` takes the `extended_annotations.rds` written to `intermediate_R/` by the first stage.
+
+*Visium HD*
+
+The same two stages described above applies. Cluster the `gene_counts/gene_counts_<res>/` matrix of whichever resolution you want, then restart with `--visium_hd` and set `--clustering_bin` to that resolution:
+
+```bash
+nextflow run . -profile singularity \
+  --input manual_clusters.csv --genome genome.fa \
+  --annotation output/intermediate_R/extended_annotations.rds \
+  --visium_hd --clustering_bin 8 \
+  --barcode_mappings barcode_mappings.parquet \
+  --manual_clustering --output_dir output_manual
+```
+
+`--bins` is not needed on the restart, and `--barcode_mappings` is only needed when `--clustering_bin` is greater than 2.
+
+**Minimal End-to-End Smoke Test**
+
+Example data and pre-configured profiles are provided in `examples/` to run the pipeline end-to-end automatically without preparing your own data. The commands below must be run from the project's root directory. Combine the profile `test_base` with one of the profiles below and a container profile (`singularity` or `docker`).
+
+| Profile | Description |
+|---|---|
+| `test_sc_fastq` | Single-cell, single-sample ONT run from raw reads |
+| `test_sc_bam` | Single-cell, single-sample ONT run from demultiplexed BAM |
+| `test_sc_multi` | Single-cell, multiple-sample run with different chemistries and technologies |
+| `test_visium` | Spatial (Visium), single-sample ONT run from raw reads |
+| `test_visium_hd` | Spatial (Visium HD), single-sample run from demultiplexed BAM |
+| `test_custom` | Custom chemistry, single-sample ONT run from demultiplexed BAM |
+| `test_sc_quant_data` | Single-cell manual clustering run |
+| `test_visium_hd_quant_data` | Visium HD manual clustering run, with clusters made at 8 µm |
+
+```bash
+# Single-cell: test from FASTQ input
+nextflow run . -profile test_base,test_sc_fastq,singularity
+
+# Single-cell: test from BAM input
+nextflow run . -profile test_base,test_sc_bam,singularity
+
+# Single-cell: test with multiple samples (ONT + PacBio)
+nextflow run . -profile test_base,test_sc_multi,singularity
+
+# Spatial: test Visium from FASTQ input
+nextflow run . -profile test_base,test_visium,singularity
+
+# Spatial: test Visium HD from a synthetic barcode-tagged BAM
+nextflow run . -profile test_base,test_visium_hd,singularity
+
+# Custom chemistry: test from demultiplexed BAM
+nextflow run . -profile test_base,test_custom,singularity
+
+# Single-cell: test clustered EM from manually generated clusters
+nextflow run . -profile test_base,test_sc_quant_data,singularity
+
+# Spatial: test Visium HD clustered EM from manually generated clusters
+nextflow run . -profile test_base,test_visium_hd_quant_data,singularity
+```
+
+The output files from the smoke tests are written to `.smoke_test/<profile>/output/`.
 
 ### **Additional Information**
 UMI correction is done at the barcode level. The longest read for each unique barcode-UMI combination is kept for analysis.
-
-### **Release History** 
-
-- v0.1-beta: 2025-May-19
-- v0.9-beta: 2026-May-11
-
 
 ### **Citation**
 If you use this pipeline, please cite our paper:
@@ -437,6 +567,9 @@ If you use this pipeline, please cite our paper:
 Sim, A., Ling, M. H., Chen, Y., Lu, H., See, Y. X., Perrin, A., Leng Agnes, O. B., Cao, E. Y., Chia, B., Liu, J., Wüstefeld, T., Shin, J. W., & Göke, J. (2025). Isoform-level discovery, quantification and fusion analysis from single-cell and spatial long-read RNA-seq data with Bambu-Clump. https://doi.org/10.1101/2024.12.30.630828
 
 The following are citations for the other tools used in this pipeline:
+
+#### Banksy
+Singhal, V., Chou, N., Lee, J., Yue, Y., Liu, J., Chock, W. K., Lin, L., Chang, Y.-C., Teo, E. M. L., Aow, J., Lee, H. K., Chen, K. H., & Prabhakar, S. (2024, February 27). Banksy unifies cell typing and tissue domain segmentation for scalable spatial omics data analysis. Nature News. https://www.nature.com/articles/s41588-024-01664-3 
 
 #### Chopper
 De Coster Wouter, & Rademakers, R. (2023). NanoPack2: Population scale evaluation of long-read sequencing data. Bioinformatics, 39(5). https://doi.org/10.1093/bioinformatics/btad311

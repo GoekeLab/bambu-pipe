@@ -23,8 +23,8 @@ class Validation {
             throw new Exception("Invalid params.quantification_mode '${params.quantification_mode}' — must be one of: ${params.valid_quantification_modes.join(', ')}")
 
         // Numeric range checks
-        if (params.cluster_resolution <= 0)
-            throw new Exception("Invalid params.cluster_resolution '${params.cluster_resolution}' — must be a positive number")
+        if (params.seurat_resolution <= 0)
+            throw new Exception("Invalid params.seurat_resolution '${params.seurat_resolution}' — must be a positive number")
 
         if (params.ndr != null && (params.ndr < 0 || params.ndr > 1))
             throw new Exception("Invalid params.ndr '${params.ndr}' — must be a float between 0 and 1")
@@ -59,7 +59,7 @@ class Validation {
                 validateVisiumHDBins(params.bins)
 
                 // only the clustering mode reads the clustering bin, so only it has to resolve
-                if (params.quantification_mode == 'EM_clusters')
+                if (params.quantification_mode == 'clusteredEM')
                     validateClusteringBin(params.bins, params.clustering_bin)
             }
         }

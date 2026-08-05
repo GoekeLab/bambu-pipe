@@ -4,6 +4,32 @@ This file contains all notable changes to Bambu-Pipe.
 
 ---
 
+## [v0.10.0] - 2026-08-05
+
+### Added
+- Visium HD workflow (`--visium_hd`), run as a single sample from a Spaceranger-aligned, barcode-tagged BAM
+  - Transcript discovery and read-to-transcript assignment at the native 2 µm resolution, with counts aggregated to every bin listed in `--bins`
+  - `--barcode_mappings` for the Spaceranger `barcode_mappings.parquet`, used to assign 2 µm spots to bins
+  - Out-of-tissue reads filtered from the BAM using the 2 µm `tissue_positions.parquet`
+  - Spatially aware clustering with Banksy (`--banksy`, `--banksy_lambda`, `--banksy_k_geom`), or gene expression alone
+  - `--clustering_bin` to select the resolution to cluster at; cluster labels are expanded back to 2 µm spots for quantification
+  - Spot-level quantification at every resolution under `--quantification_mode EM`
+  - `test_visium_hd` smoke test profile with synthetic example data
+- `--manual_clustering` to restart the pipeline from cluster assignments generated outside the pipeline, for both standard and Visium HD runs
+- `test_sc_quant_data` and `test_visium_hd_quant_data` smoke test profiles covering the manual clustering restart
+- Self-hosted `bambu` and `seurat` container images published to `ghcr.io/goekelab`, built by the `build_container.yml` GitHub Actions workflow
+- Shared R helpers in `bin/` for transcript discovery, Seurat object creation, count saving, and cluster mapping
+
+### Changed
+- Renamed `--resolution` to `--seurat_resolution`
+- Renamed the `--quantification_mode` option `EM_clusters` to `clusteredEM`, matching the `bambu.singlecell` API
+- `quant_data.rds` and `extended_annotations.rds` are now always published to `intermediate_R/`, so a manual clustering run can restart from them
+- Seurat objects are built from the published count directories and Bambu's `colData` instead of the `SummarizedExperiment`
+- `clusters.rds` is now a named vector of `id -> cluster` label, replacing the per-sample list of `CompressedCharacterList`
+- Cluster-level quantification moved into a single module shared by the standard and Visium HD workflows
+- Restructured modules into `standard/`, `visium_hd/`, and `shared/` directories
+- Smoke tests now run on pull request and manual dispatch only, with in-progress runs cancelled on a new push
+
 ## [v0.9.1] - 2026-05-20
 
 ### Added
