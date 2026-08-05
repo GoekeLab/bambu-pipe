@@ -22,8 +22,8 @@ process BAMBU_CONSTRUCT_READ_CLASS{
 	annotation <- readRDS("$bambu_annotation")
     # Rename BAM to val(sample) so bambu derives sampleName from val(sample), regardless of the original filename
     file.symlink("$bam", "${sample}.bam")
-    readClassFile <- bambu.singlecell(reads = "${sample}.bam", annotations = annotation, genome = "$genome",
-        ncore = $task.cpus, discovery = FALSE, quant = FALSE, verbose = FALSE, assignDist = FALSE, 
+    readClassFile <- bambu.singlecell(reads = "${sample}.bam", output = "readClasses",
+        annotations = annotation, genome = "$genome", ncore = $task.cpus, verbose = FALSE,
         processByChromosome = as.logical("$params.process_by_chromosome"), yieldSize = 10000000)
     saveRDS(readClassFile[[1]], "${sample}_read_class.rds")
     

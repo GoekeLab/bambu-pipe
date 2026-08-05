@@ -18,7 +18,6 @@ process SEURAT_SINGLE_SAMPLE {
     """
     #!/usr/bin/env Rscript
     library(SummarizedExperiment)
-    library(IRanges)
     library(Seurat)
 
     se     <- readRDS("$se")
@@ -34,19 +33,17 @@ process SEURAT_SINGLE_SAMPLE {
     cellMix <- RunPCA(cellMix, features = VariableFeatures(object = cellMix), npcs = npcs)
     dim     <- ifelse(dim >= dim(cellMix@reductions\$pca)[2], dim(cellMix@reductions\$pca)[2], dim)
     cellMix <- FindNeighbors(cellMix, dims = 1:dim)
-    cellMix <- FindClusters(cellMix, resolution = $params.resolution)
+    cellMix <- FindClusters(cellMix, resolution = $params.resolution, cluster.name = "clusters")
+    
     saveRDS(cellMix, "seurat_obj.rds")
 
-    x <- setNames(names(cellMix@active.ident), cellMix@active.ident)
-    clusters <- list(splitAsList(unname(x), paste0("cluster", names(x))))
-
-    saveRDS(cellMix, "cell_mix.rds")
+    clusters <- setNames(paste0("cluster_", cellMix\$clusters), names(cellMix\$clusters))
     saveRDS(clusters, "clusters.rds")
+    
     writeLines(c(
         '"${task.process}":',
         paste0('    R: ',                   R.Version()\$version.string),
         paste0('    seurat: ',              as.character(packageVersion("Seurat"))),
-        paste0('    IRanges: ',             as.character(packageVersion("IRanges"))),
         paste0('    SummarizedExperiment: ', as.character(packageVersion("SummarizedExperiment")))
     ), "versions.yml")
     """

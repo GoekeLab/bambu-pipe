@@ -88,7 +88,7 @@ workflow {
 
         if (params.quantification_mode != 'no_quant') {
             if (params.quantification_mode == 'EM_clusters') {
-                CLUSTERING(BAMBU_TRANSCRIPT_DISCOVERY.out.se_gene_counts, BAMBU_TRANSCRIPT_DISCOVERY.out.sample_names, ch_n_samples)
+                CLUSTERING(BAMBU_TRANSCRIPT_DISCOVERY.out.se_gene_counts, ch_n_samples)
                 ch_clusters = CLUSTERING.out.clusters.map { clusters -> [true, clusters] } // flag to indicate that clustering was performed
             } else {
                 ch_clusters = channel.value([false, []]) // flag to indicate that clustering was not performed

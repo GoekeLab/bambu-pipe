@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y libcurl4-openssl-dev procps git \
 ARG MAMBA_DOCKERFILE_ACTIVATE=1
 
 # Install bioconductor version of bambu for its dependencies
+# TODO: data.table 1.17.8 installation is a temp fix for clustered_EM 
 RUN micromamba install -y -n base -c conda-forge -c bioconda \
     r-base=4.5.3 \
     r-devtools=2.5.2 \
@@ -15,11 +16,12 @@ RUN micromamba install -y -n base -c conda-forge -c bioconda \
     bioconductor-dropletutils=1.30.0 \
     r-seurat=5.4.0 \
     r-harmony=2.0.2 \
+    r-data.table=1.17.8 \
     gxx=15.2.0 \
     && micromamba clean --all --yes
 
 # Clone bambu single cell feature branch 
-RUN git clone --branch exportNewFunctions \
+RUN git clone --branch devel_pre_v4 \
     https://github.com/GoekeLab/bambu.git /opt/bambu \
     && R -e 'devtools::install("/opt/bambu")'
 

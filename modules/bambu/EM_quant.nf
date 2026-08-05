@@ -32,14 +32,11 @@ process BAMBU_EM{
     degBias      <- !is.null(clusters)
 
     se <- bambu.singlecell(
-        reads = NULL,
+        reads = quantData,
+        output = if (is.null(clusters)) "EM" else "clusteredEM",
         annotations = extendedAnno,
         genome = "$genome",
-        quantData = quantData,
-        assignDist = FALSE,
         ncore = $task.cpus,
-        discovery = FALSE,
-        quant = TRUE,
         verbose = FALSE,
         opt.em = list(degradationBias = degBias),
         clusters = clusters
