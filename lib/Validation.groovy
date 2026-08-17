@@ -31,22 +31,14 @@ class Validation {
 
         // Visium HD checks
         if (params.visium_hd) {
-            // the manual path only needs the mappings when it has to expand bins down to 2um
-            def needsBarcodeMappings = !params.manual_clustering || params.clustering_bin != 2
+            def needsBarcodeMappings
 
-            if (needsBarcodeMappings) {
-                if (params.barcode_mappings == null)
-                    throw new Exception("params.barcode_mappings is required when params.visium_hd is true")
-
-                if (!params.barcode_mappings.exists())
-                    throw new Exception("params.barcode_mappings '${params.barcode_mappings}' does not exist")
-
-                if (params.barcode_mappings.extension != 'parquet')
-                    throw new Exception("params.barcode_mappings '${params.barcode_mappings}' must be a .parquet file")
+            if (params.manual_clustering) {
+                // the manual path only expands bins down to 2um when the clusters were made at a coarser bin
+                needsBarcodeMappings = params.clustering_bin != 2
             }
-
-            // the bins samplesheet only drives the automatic path
-            if (!params.manual_clustering) {
+            else {
+                // the bins samplesheet only drives the automatic path
                 if (params.bins == null)
                     throw new Exception("params.bins is required when params.visium_hd is true")
 
@@ -61,6 +53,20 @@ class Validation {
                 // only the clustering mode reads the clustering bin, so only it has to resolve
                 if (params.quantification_mode == 'clusteredEM')
                     validateClusteringBin(params.bins, params.clustering_bin)
+
+                // every bin coarser than 2um is aggregated from the 2um spots, which needs the mappings
+                needsBarcodeMappings = readBinResolutions(params.bins).any { res -> res != "2" }
+            }
+
+            if (needsBarcodeMappings) {
+                if (params.barcode_mappings == null)
+                    throw new Exception("params.barcode_mappings is required to aggregate 2 um spots into bins")
+
+                if (!params.barcode_mappings.exists())
+                    throw new Exception("params.barcode_mappings '${params.barcode_mappings}' does not exist")
+
+                if (params.barcode_mappings.extension != 'parquet')
+                    throw new Exception("params.barcode_mappings '${params.barcode_mappings}' must be a .parquet file")
             }
         }
     }
@@ -82,22 +88,14 @@ class Validation {
     }
 
     static def validateVisiumHDBins(bins) {
-        def lines = bins.text.readLines().findAll { line -> line.trim() }
-        if (lines.size() < 2)
-            throw new Exception("params.bins '${bins}' must have a header row and at least one resolution row")
-
-        def header = lines[0].split(',').collect { col -> col.trim() }
-        ["resolution", "tissue_positions"].each { col ->
-            if (!header.contains(col))
-                throw new Exception("params.bins '${bins}' is missing a required '${col}' column")
-        }
-
         if (!readBinResolutions(bins).contains("2"))
             throw new Exception("params.bins '${bins}' must include a row for the native 2 um resolution (resolution = 2)")
     }
 
     static def readBinResolutions(bins) {
         def lines = bins.text.readLines().findAll { line -> line.trim() }
+        if (lines.size() < 2) return [] // no data rows to read
+
         def header = lines[0].split(',').collect { col -> col.trim() }
         def resIdx = header.indexOf("resolution")
         lines[1..-1].collect { line -> line.split(',')[resIdx].trim() }

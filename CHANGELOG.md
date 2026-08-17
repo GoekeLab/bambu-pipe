@@ -4,7 +4,7 @@ This file contains all notable changes to Bambu-Pipe.
 
 ---
 
-## [v0.10.0] - 2026-08-05
+## [v0.10.0] - 2026-08-17
 
 ### Added
 - Visium HD workflow (`--visium_hd`), run as a single sample from a Spaceranger-aligned, barcode-tagged BAM
