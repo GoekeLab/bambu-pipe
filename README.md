@@ -158,9 +158,9 @@ To configure the executor and container, pass profile types via the `-profile` a
 
 See the [Visium HD](#visium-hd) section for the required input files and samplesheet format.
 - `--visium_hd` [boolean, default: false]: Enable the Visium HD workflow
-- `--bins` [string, default: null]: Path to a `.csv` listing the resolutions to quantify. Required when `--visium_hd` is set
-- `--barcode_mappings` [string, default: null]: Path to the Spaceranger `barcode_mappings.parquet`. Required whenever a bin coarser than 2 µm is used — that is, when `--bins` lists a resolution other than 2, or, on a `--manual_clustering` restart, when `--clustering_bin` is not 2
-- `--clustering_bin` [integer, default: 8]: Bin size (µm) to cluster at. Must be listed in `--bins`
+- `--bins` [string, default: null]: Path to a `.csv` listing all the resolutions at which the unique counts and gene counts are computed. Required when `--visium_hd` is set
+- `--clustering_bin` [integer, default: 8]: Bin size (µm) to cluster at. Must be one of the values in `--bins`.
+- `--barcode_mappings` [string, default: null]: Path to the Spaceranger `barcode_mappings.parquet`. Required whenever a bin coarser than 2 µm is listed in `--bins` (e.g. 8 µm)
 - `--banksy` [boolean, default: true]: If true, clusters with [Banksy](https://github.com/prabhakarlab/Banksy) using both expression and spatial position. If false, clusters on gene expression alone
 - `--banksy_lambda` [float, default: 0.8]: Weight given to spatial information
 - `--banksy_k_geom` [integer, default: 50]: Number of spatial neighbours per bin
