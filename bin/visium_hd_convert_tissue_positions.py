@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+"""10x ships the Visium HD spatial metadata as tissue_positions.parquet, one file per bin
+resolution. This script converts the parquet file to CSV so that every downstream step can
+read it. The 2um tissue_positions file is also used to generate a list of in-tissue
+barcodes, which filters the BAM so that it only carries barcodes that are in the tissue.
+"""
 import argparse
 
 import pandas as pd

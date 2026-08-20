@@ -34,14 +34,14 @@ process BAMBU_TRANSCRIPT_DISCOVERY_VISIUM_HD {
     #!/usr/bin/env Rscript
     if ("$params.bambu_path" == "null") { library("bambu") } else { library("devtools"); load_all("$params.bambu_path") }
     library(DropletUtils)
-    source(Sys.which("bambu_discovery.R"))
+    source(Sys.which("bambu_discovery_to_unique_counts.R"))
     source(Sys.which("save_counts.R"))
 
     annotation <- readRDS("$bambu_annotation")
     readClassFile <- setNames("$rds_files", "$sample")
 
     # the 2um tissue_positions is passed as sampleData so bambu joins the per-spot spatial metadata into colData
-    result <- bambuDiscovery(reads = readClassFile, annotation = annotation, genome = "$genome",
+    result <- bambuDiscoveryToUniqueCounts(reads = readClassFile, annotation = annotation, genome = "$genome",
         ncore = $task.cpus, ndr = $ndr, sampleData = "$tissue_positions")
     saveRDS(result\$extendedAnno, "extended_annotations.rds")
     writeToGTF(result\$extendedAnno, "extended_annotations.gtf")

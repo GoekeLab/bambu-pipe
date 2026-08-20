@@ -1,14 +1,16 @@
 # Assumes SummarizedExperiment, Matrix and dplyr are loaded by the caller.
-# A spot is a 2um barcode, i.e. one column of se; a bin is the coarser square
-# (e.g. 8um) that several spots fall into.
-# Build a bin-resolution SummarizedExperiment from a 2um-resolution SE by summing
-# counts across the spots that share each bin. spotMappings gives the spot -> bin
-# assignment for one resolution; tissuePositions supplies the new colData,
-# alongside the id and sampleName carried over from the 2um SE.
-# rowRanges/rowData and metadata are carried over.
+
+# aggregateResolution() - build a coarser resolution SE (e.g. 8 um) from a 
+# 2um-resolution SE by summing counts across the spots that share each bin
+#   se              - the 2um-resolution SE, one column per spot
+#   tissuePositions - metadata of the bin resolution: barcode, in_tissue, the array
+#                     coordinates and the fullres pixel coordinates of each bin
+#   spotMappings    - data.frame mapping each 2um sample_barcode to its coarser resolution bin (e.g. 2um -> 8um)
+# Returns a SE with one column per bin. Its colData holds tissuePositions, plus the id
+# and sampleName columns carried over from the 2um SE; rowRanges/rowData and metadata
+# are carried over.
 aggregateResolution <- function(se, tissuePositions, spotMappings) {
-    # Every column of se is one spot, so look up the bin each spot falls in. The
-    # prefixed forms are used so the aggregated columns are named like bambu ids.
+    # Look up spotMappings with the 2um barcodes of se to get the bin each spot falls in
     matchIdx     <- match(colData(se)$id, spotMappings$sample_barcode)
     spotToBinMap <- factor(spotMappings$sample_bin[matchIdx])
 

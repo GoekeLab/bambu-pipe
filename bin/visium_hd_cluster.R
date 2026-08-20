@@ -1,9 +1,17 @@
 # Seurat clustering of a single Visium HD bin resolution, adapted from
 # https://satijalab.org/seurat/articles/visiumhd_analysis_vignette
 # Assumes Seurat is loaded by the caller, plus SeuratWrappers and Banksy
-# when the spatially aware path is used.
+# when the Nextflow parameter--banksy is set to True.
 
-# Spatially aware clustering using Banksy (Refer to vignette for more information)
+# clusterBanksy() - spatially aware clustering using Banksy (refer to the vignette)
+#   object            - Seurat object of one bin resolution, with the fullres pixel
+#                       coordinates in meta.data
+#   assay             - name of the assay to cluster on
+#   lambda            - Banksy spatial weight
+#   kGeom             - number of spatial neighbours Banksy builds its features from
+#   clusterResolution - resolution passed to FindClusters()
+#   npcs              - number of PCs, capped at ncol(object) - 1
+# Returns the Seurat object with a 'clusters' column in meta.data
 clusterBanksy <- function(object, assay, lambda, kGeom, clusterResolution, npcs = 30) {
     # dimx/dimy name the meta.data columns carrying each bin's coordinates
     object <- RunBanksy(object, lambda = lambda, assay = assay, slot = "data",
@@ -18,7 +26,14 @@ clusterBanksy <- function(object, assay, lambda, kGeom, clusterResolution, npcs 
     FindClusters(object, cluster.name = "clusters", resolution = clusterResolution, verbose = FALSE)
 }
 
-# Expression-only clustering (Refer to vignette for more information)
+# clusterExpression() - expression-only clustering (refer to the vignette)
+#   object            - Seurat object of one bin resolution
+#   assay             - name of the assay to cluster on
+#   clusterResolution - resolution passed to FindClusters()
+#   dims              - number of PCs, capped at ncol(object) - 1
+#   ncells            - number of cells SketchData() samples; sketch-based analysis is
+#                       only performed when the object has more cells than this
+# Returns the Seurat object with a 'clusters' column in meta.data
 clusterExpression <- function(object, assay, clusterResolution, dims = 15, ncells = 50000) {
     object <- FindVariableFeatures(object, verbose = FALSE)
     object <- ScaleData(object, verbose = FALSE)

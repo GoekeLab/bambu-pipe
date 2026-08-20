@@ -11,9 +11,12 @@ readClusters <- function(path) {
     setNames(as.character(clusterDf$cluster), clusterDf$id)
 }
 
-# Seurat stores the map of bin-level barcode (e.g., 8um) -> cluster. To allow Bambu,
-# to run quantification, we have to generate the 2um barocde -> cluster map
-# as quantData is generated at the 2um resolution
+# mapSpotsToClusters() - build the 2 um barcode -> cluster map from a coarser one
+#   binToClustersMap - named vector from readClusters(), bin barcode -> cluster
+#   spotMappings     - data.frame mapping each 2 um sample_barcode to its sample_bin
+# When clustering is performed at a coarser resolution, the original barcode to cluster
+# map is at the bin-level (e.g., 8 um). However, quantData is generated at 2 um, so we
+# need to generate a mapping from the 2 um barcodes to clusters.
 mapSpotsToClusters <- function(binToClustersMap, spotMappings) {
     spotToClustersMap <- setNames(unname(binToClustersMap[spotMappings$sample_bin]), spotMappings$sample_barcode)
     spotToClustersMap[!is.na(spotToClustersMap)]

@@ -32,7 +32,7 @@ process BAMBU_TRANSCRIPT_DISCOVERY{
 	#!/usr/bin/env Rscript
     if ("$params.bambu_path" == "null") { library("bambu") } else { library("devtools"); load_all("$params.bambu_path") }
     library(DropletUtils)
-    source(Sys.which("bambu_discovery.R"))
+    source(Sys.which("bambu_discovery_to_unique_counts.R"))
     source(Sys.which("save_counts.R"))
 
     annotation <- readRDS("$bambu_annotation")
@@ -43,7 +43,7 @@ process BAMBU_TRANSCRIPT_DISCOVERY{
     technology <- setNames(strsplit("${meta.collect { m -> m.technology }.join(',')}", ",")[[1]], sampleNames)
     sampleData <- if (any(startsWith(chemistry, "visium-v"))) sampleData else NULL # Add spatial metadata for visium samples
 
-    result <- bambuDiscovery(reads = readClassFile, annotation = annotation, genome = "$genome",
+    result <- bambuDiscoveryToUniqueCounts(reads = readClassFile, annotation = annotation, genome = "$genome",
         ncore = $task.cpus, ndr = $ndr, sampleData = sampleData)
     saveRDS(result\$extendedAnno, "extended_annotations.rds")
     writeToGTF(result\$extendedAnno, "extended_annotations.gtf")

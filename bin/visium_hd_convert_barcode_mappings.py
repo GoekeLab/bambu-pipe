@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+"""10x ships the Visium HD barcode mapping as barcode_mappings.parquet, with one column
+per bin resolution (2um -> 8um, 16um, 32um, etc). This script extracts the mapping from
+2um to one of those resolutions (e.g. 2um -> 8um) and exports it into a CSV file.
+"""
 import argparse
 import sys
 
