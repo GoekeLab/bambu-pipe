@@ -1,17 +1,27 @@
-# save_counts() - write a SummarizedExperiment as a count directory: one
-# MTX file per assay, plus a single shared barcodes.tsv.gz / features.tsv.gz,
-# and the SummarisedExperiment object. 
-# Assumes DropletUtils and bambu have been loaded
+# Assumes DropletUtils and bambu are loaded by the caller.
 
-save_counts <- function(se, dir, gene.type = "Gene Expression") {
-    write10xCounts(dir, assays(se)$counts, version = "3", gene.type = gene.type)
+# saveCounts() - write a SummarizedExperiment as a 10x-style count directory, so
+# downstream tools can read the matrices without loading the whole object.
+#   se       - SummarizedExperiment object from bambu
+#   dir      - name of the output directory
+#   geneType - feature type written to the third column of features.tsv.gz,
+#              "Transcript Expression" for transcript-level se, otherwise the
+#              "Gene Expression" default.
+# Writes into dir:
+#   <assayName>.mtx.gz - one MatrixMarket file per assay, (e.g. counts, CPM)
+#   barcodes.tsv.gz    - colnames(se), one per line, shared by every matrix
+#   features.tsv.gz    - rownames(se) and geneType, shared by every matrix
+#   se_<dir>.rds       - SummarizedExperiment object
+
+saveCounts <- function(se, dir, geneType = "Gene Expression") {
+    write10xCounts(dir, assays(se)$counts, version = "3", gene.type = geneType)
     file.rename(file.path(dir, "matrix.mtx.gz"), file.path(dir, "counts.mtx.gz"))
-    extra_assays <- setdiff(assayNames(se), "counts")
-    for (assay_name in extra_assays) {
-        mat      <- as(assays(se)[[assay_name]], "CsparseMatrix")
-        mtx_path <- file.path(dir, paste0(assay_name, ".mtx"))
-        Matrix::writeMM(mat, mtx_path)
-        R.utils::gzip(mtx_path, overwrite = TRUE)
+    extraAssays <- setdiff(assayNames(se), "counts")
+    for (assayName in extraAssays) {
+        mat     <- as(assays(se)[[assayName]], "CsparseMatrix")
+        mtxPath <- file.path(dir, paste0(assayName, ".mtx"))
+        Matrix::writeMM(mat, mtxPath)
+        R.utils::gzip(mtxPath, overwrite = TRUE)
     }
     saveRDS(se, file.path(dir, paste0("se_", dir, ".rds")))
 }
