@@ -1,22 +1,20 @@
-process BAMBU_EM{
-    publishDir "$params.output_dir", mode: 'copy', pattern: 'transcript_counts_singlecell'
+process BAMBU_CLUSTER_LEVEL_QUANTIFICATION {
     publishDir "$params.output_dir", mode: 'copy', pattern: 'transcript_counts_clusters'
     publishDir "$params.output_dir", mode: 'copy', pattern: 'gene_counts_clusters'
-    label "r"
+    label "bambu"
     label "low_cpu"
     label "high_mem"
     label "long"
 
     input:
+    path(clusters)
     path(quant_data)
     path(extended_annotation)
-    tuple val(has_clusters), path(clusters)
     path(genome)
 
     output:
-    path ('transcript_counts_singlecell'), optional: true
-    path ('transcript_counts_clusters'), optional: true
-    path ('gene_counts_clusters'), optional: true
+    path ('transcript_counts_clusters')
+    path ('gene_counts_clusters')
     path "versions.yml", topic: 'versions'
 
     script:
@@ -28,28 +26,25 @@ process BAMBU_EM{
 
     extendedAnno <- readRDS("$extended_annotation")
     quantData    <- readRDS("$quant_data")
-    clusters     <- if ("$has_clusters" == "true") readRDS("$clusters") else NULL
-    degBias      <- !is.null(clusters)
+
+    # load clusters if it is a .rds file, else provide path to bambu
+    clusters <- if (endsWith("$clusters", ".rds")) readRDS("$clusters") else "$clusters"
 
     se <- bambu.singlecell(
         reads = quantData,
-        output = if (is.null(clusters)) "EM" else "clusteredEM",
+        output = "clusteredEM",
         annotations = extendedAnno,
         genome = "$genome",
         ncore = $task.cpus,
         verbose = FALSE,
-        opt.em = list(degradationBias = degBias),
+        opt.em = list(degradationBias = TRUE),
         clusters = clusters
     )
 
-    if (is.null(clusters)) {
-        save_counts(se, "transcript_counts_singlecell", "Transcript Expression")
-    } else {
-        save_counts(se, "transcript_counts_clusters", "Transcript Expression")
+    saveCounts(se, "transcript_counts_clusters", "Transcript Expression")
 
-        se_gene <- transcriptToGeneExpression(se)
-        save_counts(se_gene, "gene_counts_clusters")
-    }
+    seGene <- transcriptToGeneExpression(se)
+    saveCounts(seGene, "gene_counts_clusters")
 
     writeLines(c('"${task.process}":', paste0('    R: ', R.Version()\$version.string), paste0('    bambu: ', as.character(packageVersion("bambu")))), "versions.yml")
     """

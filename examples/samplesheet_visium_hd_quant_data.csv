@@ -1,0 +1,2 @@
+clusters_path,quant_data_path
+examples/clusters_visium_hd_synthetic.rds,examples/quant_data_visium_hd_synthetic.rds

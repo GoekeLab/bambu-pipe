@@ -1,0 +1,4 @@
+resolution,tissue_positions
+2,examples/tissue_positions_002um_synthetic.parquet
+8,examples/tissue_positions_008um_synthetic.parquet
+16,examples/tissue_positions_016um_synthetic.parquet

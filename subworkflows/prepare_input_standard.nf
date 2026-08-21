@@ -1,5 +1,5 @@
-include { EXTRACT_10X_BARCODES } from '../modules/prepare_input_standard/extract_barcodes.nf'
-include { EXTRACT_10X_SPATIAL_COORDINATES } from '../modules/prepare_input_standard/extract_spatial_coordinates.nf'
+include { EXTRACT_10X_BARCODES } from '../modules/prepare_input/standard/extract_barcodes.nf'
+include { EXTRACT_10X_SPATIAL_COORDINATES } from '../modules/prepare_input/standard/extract_spatial_coordinates.nf'
 
 workflow PREPARE_INPUT_STANDARD {
     take:
