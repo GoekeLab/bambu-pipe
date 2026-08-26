@@ -69,6 +69,18 @@ class Validation {
                     throw new Exception("params.barcode_mappings '${params.barcode_mappings}' must be a .parquet file")
             }
         }
+
+        // Loupe alignment checks (standard Visium only)
+        if (params.loupe_alignment != null) {
+            if (params.visium_hd)
+                throw new Exception("params.loupe_alignment is not used by the Visium HD workflow — tissue filtering uses the tissue_positions parquet files instead")
+
+            if (!params.loupe_alignment.exists())
+                throw new Exception("params.loupe_alignment '${params.loupe_alignment}' does not exist")
+
+            if (params.loupe_alignment.extension != 'json')
+                throw new Exception("params.loupe_alignment '${params.loupe_alignment}' must be a .json file")
+        }
     }
 
     static def validateVisiumHDRows(rows) {
@@ -107,10 +119,13 @@ class Validation {
             throw new Exception("params.clustering_bin '${clusteringBin}' is not listed in params.bins '${bins}' — available bins: ${resolutions.join(', ')}")
     }
 
-    static def validateVisiumSampleCount(samples) {
+    static def validateVisiumSampleCount(samples, loupeAlignment) {
         def has_visium = samples.any { sample, path, meta -> meta.chemistry.startsWith('visium') }
         if (has_visium && samples.size() > 1)
             throw new Exception("Visium chemistry requires exactly 1 sample, but found ${samples.size()}")
+
+        if (loupeAlignment != null && !has_visium)
+            throw new Exception("params.loupe_alignment was provided but no sample uses a visium chemistry")
     }
 
     static def validateRow(row, params, log) {
@@ -130,6 +145,9 @@ class Validation {
 
         if (!params.valid_technologies.contains(row.technology))
             throw new Exception("Sample '${row.sample}' has invalid technology '${row.technology}' — must be one of: ${params.valid_technologies.join(', ')}")
+
+        if (row.chemistry.startsWith('visium') && params.loupe_alignment == null)
+            throw new Exception("Visium sample '${row.sample}' requires params.loupe_alignment — a Loupe manual alignment .json with the tissue selection")
     }
 
 }

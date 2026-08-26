@@ -1,4 +1,4 @@
-include { FILTER_BARCODED_BAM }      from '../modules/prepare_input/visium_hd/filter_barcoded_bam.nf'
+include { FILTER_BARCODED_BAM }      from '../modules/prepare_input/shared/filter_barcoded_bam.nf'
 include { CONVERT_BARCODE_MAPPINGS } from '../modules/prepare_input/visium_hd/convert_barcode_mappings.nf'
 include { CONVERT_TISSUE_POSITIONS } from '../modules/prepare_input/visium_hd/convert_tissue_positions.nf'
 

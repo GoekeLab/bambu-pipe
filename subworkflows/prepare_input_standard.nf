@@ -1,10 +1,12 @@
 include { EXTRACT_10X_BARCODES } from '../modules/prepare_input/standard/extract_barcodes.nf'
 include { EXTRACT_10X_SPATIAL_COORDINATES } from '../modules/prepare_input/standard/extract_spatial_coordinates.nf'
+include { CREATE_VISIUM_TISSUE_POSITIONS } from '../modules/prepare_input/standard/create_visium_tissue_positions.nf'
 
 workflow PREPARE_INPUT_STANDARD {
     take:
     ch_rows
     ch_barcode_coordinate_config
+    loupe_alignment
 
     main:
     // parse samplesheet rows into channel of tuples (sample, path, metadata)
@@ -15,8 +17,8 @@ workflow PREPARE_INPUT_STANDARD {
         [row.sample, sample_path, meta]
     }
 
-    // validate: ensure only one visium sample is processed at a time
-    ch_samples.collect(flat: false).map { samples -> Validation.validateVisiumSampleCount(samples) }
+    // validate: for visium runs, ensure only one sample is processed at a time
+    ch_samples.collect(flat: false).map { samples -> Validation.validateVisiumSampleCount(samples, loupe_alignment) }
 
     // extract distinct chemistries from metadata
     ch_unique_chem = ch_samples.map { _sample, _path, meta -> meta.chemistry }.unique()
@@ -28,23 +30,31 @@ workflow PREPARE_INPUT_STANDARD {
     ch_barcodes = EXTRACT_10X_BARCODES.out.barcodes
         .mix(ch_unique_custom.map { chem -> [chem, null] })
 
-    // extract spatial coordinates for visium chemistries only; add placeholder for non-visium samples
-    ch_unique_visium     = ch_unique_chem.filter { chem -> chem.startsWith('visium') }
-    ch_unique_non_visium = ch_unique_chem.filter { chem -> !chem.startsWith('visium') }
+    // extract spatial coordinates for visium chemistries only
+    ch_unique_visium = ch_unique_chem.filter { chem -> chem.startsWith('visium') }
     EXTRACT_10X_SPATIAL_COORDINATES(ch_unique_visium, ch_barcode_coordinate_config)
-    ch_spatial_coordinates = EXTRACT_10X_SPATIAL_COORDINATES.out.spatial_coordinates
-        .mix(ch_unique_non_visium.map { chem -> [chem, null] })
 
-    // update metadata with barcode and spatial coordinate paths
-    ch_updated_samples = ch_samples.map { sample, path, meta -> [meta.chemistry, sample, path, meta] }
+    // update sample tuples with the chemistry's barcode whitelist
+    ch_keyed_samples = ch_samples.map { sample, path, meta -> [meta.chemistry, sample, path, meta] }
         .combine(ch_barcodes, by: 0)
-        .combine(ch_spatial_coordinates, by: 0)
-        .map { _chem, sample, path, meta, bc, sc ->
-            def updated_meta = meta + [
-                barcode: bc,
-                spatial_metadata: sc
-            ]
-            return [sample, path, updated_meta]
+
+    // build the tissue positions (spatial metadata) from the Loupe manual alignment file and the spatial
+    // coordinate whitelist file. Also generate the in-tissue barcode list which will be used to filter
+    // the BAM file.
+    if (loupe_alignment != null) {
+        CREATE_VISIUM_TISSUE_POSITIONS(EXTRACT_10X_SPATIAL_COORDINATES.out.spatial_coordinates, loupe_alignment)
+        ch_tissue_barcodes = CREATE_VISIUM_TISSUE_POSITIONS.out.tissue_barcodes.first()
+        ch_updated_samples = ch_keyed_samples
+            .combine(CREATE_VISIUM_TISSUE_POSITIONS.out.tissue_positions.first())
+            .map { _chem, sample, path, meta, bc, sc ->
+                [sample, path, meta + [barcode: bc, spatial_metadata: sc]]
+            }
+    } else {
+        ch_tissue_barcodes = channel.empty()
+        ch_updated_samples = ch_keyed_samples
+            .map { _chem, sample, path, meta, bc ->
+                [sample, path, meta + [barcode: bc, spatial_metadata: null]]
+            }
     }
 
     // split samples by file type
@@ -55,4 +65,5 @@ workflow PREPARE_INPUT_STANDARD {
     emit:
     fastq = ch_fastq
     bam = ch_bam
+    tissue_barcodes = ch_tissue_barcodes
 }

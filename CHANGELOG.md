@@ -4,6 +4,23 @@ This file contains all notable changes to Bambu-Pipe.
 
 ---
 
+## [v0.10.1] - 2026-08-26
+
+### Added
+- `--loupe_alignment` for Visium Spatial Gene Expression samples, taking the manual alignment `.json` exported after fiducial alignment and tissue detection in Loupe Browser. Required for `visium-v*` samples
+  - Out-of-tissue barcodes are filtered from the BAM before transcript discovery and quantification
+  - `CREATE_VISIUM_TISSUE_POSITIONS` module and `bin/visium_tissue_positions.py`, building the tissue positions and the in-tissue barcode list from the alignment file and the chemistry's spot coordinates
+  - Loupe alignment example (`examples/loupe_alignment_visium_example.json`), used by the `test_visium` smoke test
+- `CB`/`UB` tags in aligned BAM files (minimap2 `-y`), carrying the barcode and UMI from the FASTQ header comments
+
+### Changed
+- The spatial metadata attached to Visium `SummarizedExperiment` objects now follows the Space Ranger tissue positions format (`barcode`, `in_tissue`, `array_row`, `array_col`, `pxl_row_in_fullres`, `pxl_col_in_fullres`), replacing the `x_coordinate`/`y_coordinate` columns
+- `FILTER_BARCODED_BAM` moved to `modules/prepare_input/shared/` and is used by both the standard Visium and Visium HD workflows; it now fails when no reads remain after filtering
+- User-supplied BAM files must carry the barcode and UMI in the `CB`/`UB` tags; barcodes encoded in the read name are no longer supported
+
+### Fixed
+- flexiplex-filter's knee detection could discard most in-tissue barcodes for Visium samples; the inflection search now covers the whole barcode rank curve (`-u 0`) for `visium-v*` chemistries
+
 ## [v0.10.0] - 2026-08-17
 
 ### Added
