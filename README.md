@@ -390,7 +390,7 @@ This feature is still under development and will be released in a future update.
 
 **Running Pipeline with a Custom Chemistry or Pre-aligned BAM**
 
-If your dataset uses a chemistry not listed under Supported 10x Library Chemistries, or if you prefer to perform FASTQ preprocessing and genome alignment manually, start the pipeline directly from a pre-processed, demultiplexed BAM file. The BAM file must have the barcode and UMI information encoded either in the `CB`/`UB` column, or in the read name using the format `<barcode>_<umi>#<read_id>`.
+If your dataset uses a chemistry not listed under Supported 10x Library Chemistries, or if you prefer to perform FASTQ preprocessing and genome alignment manually, start the pipeline directly from a pre-processed, demultiplexed BAM file. The BAM file must have the barcode and UMI information encoded in the `CB`/`UB` columns.
 
 *Samplesheet (Custom Chemistry)*
 
