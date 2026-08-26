@@ -1,4 +1,4 @@
-process CREATE_VISIUM_TISSUE_POSITIONS {
+process BUILD_VISIUM_TISSUE_POSITIONS {
     publishDir "$params.output_dir/intermediate_visium", mode: 'copy', pattern: 'tissue_positions.csv', enabled: params.save_intermediates
     publishDir "$params.output_dir/intermediate_visium", mode: 'copy', pattern: 'tissue_barcodes.txt', enabled: params.save_intermediates
     label "pyarrow_pandas"
@@ -17,7 +17,7 @@ process CREATE_VISIUM_TISSUE_POSITIONS {
 
     script:
     """
-    visium_tissue_positions.py $loupe_alignment $spatial_coordinates tissue_positions.csv tissue_barcodes.txt
+    build_visium_tissue_positions.py $loupe_alignment $spatial_coordinates tissue_positions.csv tissue_barcodes.txt
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

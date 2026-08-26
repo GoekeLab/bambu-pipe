@@ -9,7 +9,7 @@ This file contains all notable changes to Bambu-Pipe.
 ### Added
 - `--loupe_alignment` for Visium Spatial Gene Expression samples, taking the manual alignment `.json` exported after fiducial alignment and tissue detection in Loupe Browser. Required for `visium-v*` samples
   - Out-of-tissue barcodes are filtered from the BAM before transcript discovery and quantification
-  - `CREATE_VISIUM_TISSUE_POSITIONS` module and `bin/visium_tissue_positions.py`, building the tissue positions and the in-tissue barcode list from the alignment file and the chemistry's spot coordinates
+  - Introduce the `BUILD_VISIUM_TISSUE_POSITIONS` module, which builds the tissue positions file for `visium-v*` samples; the spatial metadata in this file is attached to the `colData` of the `SummarizedExperiment` objects
   - Loupe alignment example (`examples/loupe_alignment_visium_example.json`), used by the `test_visium` smoke test
 - `CB`/`UB` tags in aligned BAM files (minimap2 `-y`), carrying the barcode and UMI from the FASTQ header comments
 

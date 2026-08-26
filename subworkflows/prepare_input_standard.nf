@@ -1,6 +1,6 @@
 include { EXTRACT_10X_BARCODES } from '../modules/prepare_input/standard/extract_barcodes.nf'
 include { EXTRACT_10X_SPATIAL_COORDINATES } from '../modules/prepare_input/standard/extract_spatial_coordinates.nf'
-include { CREATE_VISIUM_TISSUE_POSITIONS } from '../modules/prepare_input/standard/create_visium_tissue_positions.nf'
+include { BUILD_VISIUM_TISSUE_POSITIONS } from '../modules/prepare_input/standard/build_visium_tissue_positions.nf'
 
 workflow PREPARE_INPUT_STANDARD {
     take:
@@ -42,10 +42,10 @@ workflow PREPARE_INPUT_STANDARD {
     // coordinate whitelist file. Also generate the in-tissue barcode list which will be used to filter
     // the BAM file.
     if (loupe_alignment != null) {
-        CREATE_VISIUM_TISSUE_POSITIONS(EXTRACT_10X_SPATIAL_COORDINATES.out.spatial_coordinates, loupe_alignment)
-        ch_tissue_barcodes = CREATE_VISIUM_TISSUE_POSITIONS.out.tissue_barcodes.first()
+        BUILD_VISIUM_TISSUE_POSITIONS(EXTRACT_10X_SPATIAL_COORDINATES.out.spatial_coordinates, loupe_alignment)
+        ch_tissue_barcodes = BUILD_VISIUM_TISSUE_POSITIONS.out.tissue_barcodes.first()
         ch_updated_samples = ch_keyed_samples
-            .combine(CREATE_VISIUM_TISSUE_POSITIONS.out.tissue_positions.first())
+            .combine(BUILD_VISIUM_TISSUE_POSITIONS.out.tissue_positions.first())
             .map { _chem, sample, path, meta, bc, sc ->
                 [sample, path, meta + [barcode: bc, spatial_metadata: sc]]
             }
