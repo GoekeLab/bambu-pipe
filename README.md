@@ -4,13 +4,14 @@
 - [Installation](#installation)
 - [General Usage](#general-usage)
 - [Parameters](#parameters)
+- [Single Cell Analysis](#single-cell-analysis)
 - [Spatial Analysis](#spatial-analysis)
   - [Visium Spatial Gene Expression](#visium-spatial-gene-expression)
   - [Visium HD](#visium-hd)
+- [Fusion Transcript Analysis (Under Development)](#fusion-transcript-analysis-under-development)
 - [Output](#output)
 - [Advanced Usage](#advanced-usage)
 - [Additional Information](#additional-information)
-- [Release History](#release-history)
 - [Citation](#citation)
 - [Contributors](#contributors)
 
@@ -36,28 +37,28 @@ This pipeline performs context-aware transcript discovery and quantification fro
    - Cluster-level EM: Gene expression-based cell clustering with [Seurat](https://github.com/satijalab/seurat) across all samples, followed by per-sample cluster-level transcript quantification
    - Single-cell EM: Transcript quantification for each cell, or for each spot in spatial samples
 
-### **Installation** 
+### **Installation**
 Install the following dependencies before running the pipeline:
 - [Nextflow](https://www.nextflow.io/docs/latest/install.html) ≥ 26.04.0
-- [Docker](https://docs.docker.com/engine/install/ubuntu/) (or [Singularity](https://docs.sylabs.io/guides/3.0/user-guide/installation.html) if you do not have user permissions for Docker). 
+- [Docker](https://docs.docker.com/engine/install/ubuntu/) (or [Singularity](https://docs.sylabs.io/guides/3.0/user-guide/installation.html) if you do not have user permissions for Docker).
 
-### **General Usage** 
-To run the pipeline, you must provide a samplesheet, reference genome, and reference annotation file as input. The pipeline performs transcript discovery and quantification on either a single sample or multiple samples based on the number of samples specified in the samplesheet. Refer to the [Parameters](#parameters) and Samplesheet (CSV) sections below for more details. 
+### **General Usage**
+To run the pipeline, you must provide a samplesheet, reference genome, and reference annotation file as input. The pipeline performs transcript discovery and quantification on either a single sample or multiple samples based on the number of samples specified in the samplesheet. Refer to the [Parameters](#parameters) and Samplesheet (CSV) sections below for more details.
 
 **Running the pipeline**
 
-Use the command below to run the pipeline on the test data provided in `examples/`
-``` 
+Use the command below to run the pipeline on the test data provided in `examples/`.
+```
 nextflow run main.nf \
   --input examples/samplesheet_test_sc_fastq.csv \
   --genome examples/GRCh38.primary_assembly.genome.chr21.fa.gz \
   --annotation examples/gencode.v49.primary_assembly.annotation.chr21.gtf.gz \
   -profile singularity,hpc
-``` 
+```
 
 **Samplesheet (CSV)**
 
-The pipeline requires a `.csv` formatted samplesheet to define the input data. This file is mandatory, regardless of the number of samples being processed. Each row in the samplesheet represents a single sample and its corresponding file path and metadata. 
+The pipeline requires a `.csv` formatted samplesheet to define the input data. This file is mandatory, regardless of the number of samples being processed. Each row in the samplesheet represents a single sample and its corresponding file path and metadata.
 
 *Required Columns*
 
@@ -106,9 +107,9 @@ For the following chemistries, the pipeline handles the full workflow — FASTQ 
 - `visium-v2` (Visium Spatial Gene Expression Slide 6.5 mm; serial prefix V2)
 - `visium-v3` (Visium Spatial Gene Expression Slide 6.5 mm; serial prefix V3)
 - `visium-v4` (Visium CytAssist Spatial Gene Expression Slide 6.5 mm; serial prefix V4)
-- `visium-v5` (Visium CytAssist Spatial Gene Expression Slide 11mm; serial prefix V5)
+- `visium-v5` (Visium CytAssist Spatial Gene Expression Slide 11 mm; serial prefix V5)
 
-> **Note:** Visium Spatial Gene Expression samples (`visium-v*`) must be run one at a time. Multi-sample runs are not supported for these chemistries.
+> **Note:** Visium Spatial Gene Expression samples (`visium-v*`) must be run one at a time and require a Loupe manual alignment file. See the [Visium Spatial Gene Expression](#visium-spatial-gene-expression) section for details.
 
 *Custom Chemistries*
 
@@ -135,18 +136,18 @@ To configure the executor and container, pass profile types via the `-profile` a
 ### **Parameters**
 
 **Mandatory**
-- `--input` [string]: Path to the samplesheet `.csv` file 
-- `--genome` [string]: Path to the reference genome `.fa`, `.fasta`, or `.fa.gz` file 
-- `--annotation` [string]: Path to the reference annotation `.gtf`, `.gff`, `.gtf.gz`, or `.gff.gz` file. When restarting the pipeline with `--manual_clustering`, provide the `extended_annotations.rds` file instead 
+- `--input` [string]: Path to the samplesheet `.csv` file
+- `--genome` [string]: Path to the reference genome `.fa`, `.fasta`, or `.fa.gz` file
+- `--annotation` [string]: Path to the reference annotation `.gtf`, `.gff`, `.gtf.gz`, or `.gff.gz` file. When restarting the pipeline with `--manual_clustering`, provide the `extended_annotations.rds` file instead
 
 **Optional**
 - `--output_dir` [string, default: 'output']: Path to the output directory
-- `--chemistry` [string, default: null]: Specify if all samples in the samplesheet share the same library chemistry 
+- `--chemistry` [string, default: null]: Specify if all samples in the samplesheet share the same library chemistry
 - `--technology` [string, default: null]: Specify if all samples in the samplesheet share the same sequencing technology
 - `--bam_only` [boolean, default: false]: If true, stops the pipeline after genome alignment and saves BAM files only (see Advanced Usage section)
 - `--qscore_filtering` [boolean, default: true]: Enable or disable quality score filtering of reads
 - `--ndr` [float, default: null]: NDR threshold for Bambu transcript discovery. If not set, Bambu will recommend a suitable value
-- `--deduplicate_umis` [boolean, default: true]: If true, Bambu will perform UMI deduplication 
+- `--deduplicate_umis` [boolean, default: true]: If true, Bambu will perform UMI deduplication
 - `--quantification_mode` [string, default: "clusteredEM"]: Quantification mode for transcript counts. Available options are:
   - "no_quant": Transcript quantification is not performed
   - "EM": Performs transcript quantification for each cell/spatial coordinate
@@ -154,32 +155,61 @@ To configure the executor and container, pass profile types via the `-profile` a
 - `--seurat_resolution` [float, default: 0.8]: Seurat clustering resolution
 - `--manual_clustering` [boolean, default: false]: If true, skips clustering and quantifies from cluster assignments generated outside the pipeline (see Advanced Usage section)
 
+**Visium**
+
+See the [Visium Spatial Gene Expression](#visium-spatial-gene-expression) section for more details.
+- `--loupe_alignment` [string, default: null]: Path to the manual alignment `.json` file exported from Loupe Browser. Required for `visium-v*` samples
+
 **Visium HD**
 
 See the [Visium HD](#visium-hd) section for the required input files and samplesheet format.
 - `--visium_hd` [boolean, default: false]: Enable the Visium HD workflow
 - `--bins` [string, default: null]: Path to a `.csv` listing all the resolutions at which the unique counts and gene counts are computed. Required when `--visium_hd` is set
 - `--clustering_bin` [integer, default: 8]: Bin size (µm) to cluster at. Must be one of the values in `--bins`.
-- `--barcode_mappings` [string, default: null]: Path to the Spaceranger `barcode_mappings.parquet`. Required whenever a bin coarser than 2 µm is listed in `--bins` (e.g. 8 µm)
+- `--barcode_mappings` [string, default: null]: Path to the Space Ranger `barcode_mappings.parquet`. Required whenever a bin coarser than 2 µm is listed in `--bins` (e.g. 8 µm)
 - `--banksy` [boolean, default: true]: If true, clusters with [Banksy](https://github.com/prabhakarlab/Banksy) using both expression and spatial position. If false, clusters on gene expression alone
 - `--banksy_lambda` [float, default: 0.8]: Weight given to spatial information
 - `--banksy_k_geom` [integer, default: 50]: Number of spatial neighbours per bin
 
+### **Single Cell Analysis**
+
+By default, the pipeline runs the single-cell workflow described in the [Overview](#overview) and [General Usage](#general-usage) sections. All supported 10x Single Cell chemistries (`10x3v*`, `10x5v*`) follow this workflow, with no additional parameters or input files required.
+
 ### **Spatial Analysis**
 
 #### **Visium Spatial Gene Expression**
-The pipeline applies the same processing steps to both 10x Single Cell and Visium Spatial Gene Expression (`visium-v*`) samples. The only difference is that the generated `SummarizedExperiment` objects are attached with spatial mapping information, which is stored in `colData`.
+The pipeline applies the same processing steps to both 10x Single Cell and Visium Spatial Gene Expression (`visium-v*`) samples, with two additions for Visium samples: barcodes outside the tissue are filtered out, and spatial metadata is attached to the results.
 
-*Example: Spatial Mapping Information*
+*Manual Fiducial Alignment and Tissue Detection (Loupe Browser)*
 
-In the `SummarizedExperiment` object, each row in `colData` contains a spatial barcode together with its X and Y coordinates on the slide. 
+For Visium Spatial Gene Expression samples (`visium-v*`), perform manual fiducial alignment and tissue detection in [Loupe Browser](https://www.10xgenomics.com/support/software/loupe-browser/latest) before running the pipeline, and supply the exported alignment `.json` file via the `--loupe_alignment` parameter. For more information, please refer to the [Manual Fiducial Alignment](https://www.10xgenomics.com/support/software/space-ranger/latest/analysis/inputs/image-fiducial-alignment) documentation.
 
-| barcode            | x_coordinate | y_coordinate | 
-|:---|:---|:---|
-| AAACAACGAATAGTTC | 17 | 1 |
-| AAACAAGTATCTCCCA  | 103 | 51 |
-| AAACAATCTACTAGCA | 44 | 4 |
+Using the alignment `.json` file supplied, the pipeline removes out-of-tissue barcodes from the BAM file before transcript discovery and quantification, and attaches spatial metadata information to the results generated by Bambu (see *Spatial Metadata* below).
 
+*Running the pipeline*
+
+```bash
+nextflow run main.nf \
+  --input examples/samplesheet_test_visium.csv \
+  --genome examples/GRCh38.primary_assembly.genome.chr21.fa.gz \
+  --annotation examples/gencode.v49.primary_assembly.annotation.chr21.gtf.gz \
+  --loupe_alignment examples/loupe_alignment_visium_example.json \
+  -profile singularity,hpc
+```
+
+*Spatial Metadata*
+
+The spatial metadata attached to the results follows the [Space Ranger Tissue Positions](https://www.10xgenomics.com/support/software/space-ranger/latest/analysis/outputs/spatial-outputs) format: the spatial barcode, the in-tissue flag, its array coordinates, and its pixel position in the full-resolution tissue image. The metadata is stored in the `colData` of the `SummarizedExperiment` objects described in the [Output](#output) section.
+
+| barcode | in_tissue | array_row | array_col | pxl_row_in_fullres | pxl_col_in_fullres |
+|:---|:---|:---|:---|:---|:---|
+| CCAAGCTTGATCTCCT | 1 | 0 | 18 | 15260.561 | 2350.7175 |
+| GAGCGCTATGTCAGGC | 1 | 0 | 20 | 15027.729 | 2349.6375 |
+| CTTCGTGCCCGCATCG | 1 | 0 | 22 | 14794.896 | 2348.5576 |
+
+*Clustering*
+
+The pipeline currently clusters Visium spots on gene expression alone, using the same Seurat workflow as single-cell samples. Spatially aware clustering (e.g. using Banksy) for `visium-v*` samples will be added in a future release.
 
 #### **Visium HD**
 
@@ -190,9 +220,9 @@ This pipeline does not demultiplex Visium HD reads. Barcode assignment and align
 
 *Required Input Files*
 
-Alongside the BAM file, Visium HD runs require two Spaceranger outputs:
+Alongside the BAM file, Visium HD runs require two Space Ranger outputs:
 
-| Spaceranger output | Description |
+| Space Ranger output | Description |
 |---|---|
 | `tissue_positions.parquet` | One file per resolution, from `binned_outputs/square_XXXum/spatial/`|
 | `barcode_mappings.parquet` | Maps each 2 µm barcode to its bin at every resolution |
@@ -201,7 +231,7 @@ For more information, please refer to the [Space Ranger Spatial Outputs](https:/
 
 *Samplesheet (CSV)*
 
-Visium HD runs take exactly one sample and only needs the `sample` and `path` columns in the input samplesheet. 
+Visium HD runs take exactly one sample and only need the `sample` and `path` columns in the input samplesheet.
 ```csv
 sample,path
 visium_hd_example,examples/visium_hd_example.bam
@@ -236,14 +266,21 @@ nextflow run main.nf \
 
 For more information on the Visium HD parameters, please refer to the [Parameters](#parameters) section.
 
+*Spatial Metadata*
+
+The spatial metadata attached to the results follows the same format described in the [Visium Spatial Gene Expression](#visium-spatial-gene-expression) section. For each resolution, the metadata is extracted from that resolution's `tissue_positions.parquet` file.
+
 *Clustering*
 
 Clustering is performed at a single resolution only, set by `--clustering_bin`, when `--quantification_mode` is set to `clusteredEM`. By default it uses Seurat with [Banksy](https://github.com/prabhakarlab/Banksy), which combines gene expression with spatial position. Set `--banksy false` to cluster on gene expression alone.
 
 When clustering is skipped under `--quantification_mode EM` (i.e., spot-level EM), transcript counts are produced at every resolution listed in `--bins`.
 
+### **Fusion Transcript Analysis (Under Development)**
+This feature is still under development and will be released in a future update.
+
 ### **Output**
-All outputs from the pipeline are written to the directory specified by the `--output_dir` parameter. The pipeline produces per-sample alignment files and the combined transcript discovery and quantification results. 
+All outputs from the pipeline are written to the directory specified by the `--output_dir` parameter. The pipeline produces per-sample alignment files and the combined transcript discovery and quantification results.
 
 *Output Structure*
 ```
@@ -256,10 +293,10 @@ output/
 │   ├── execution_trace.txt
 │   └── pipeline_dag.svg
 │
-├── bam/                                
+├── bam/
 │   ├── <sample>_demultiplexed.bam
 │   └── <sample>_demultiplexed.bam.bai
-│    # (one pair per sample for multi-sample runs)  
+│    # (one pair per sample for multi-sample runs)
 │
 ├── extended_annotations.gtf
 │
@@ -346,9 +383,9 @@ output/
 ```
 
 **Description of the Output Files**
-| File | Description 
+| File | Description
 |---|---
-| `<sample>_demultiplexed.bam` | BAM file containing demultiplexed, trimmed and aligned reads
+| `<sample>_demultiplexed.bam` | BAM file containing all demultiplexed, trimmed and aligned reads, with the barcode and UMI stored in the `CB`/`UB` tags
 | `<sample>_demultiplexed.bam.bai` | BAM index for the corresponding BAM file
 | `extended_annotations.gtf` | A `.gtf` file containing the novel transcripts discovered by Bambu as well as the reference annotations provided by the user.
 | `seurat_obj.rds` | A [SeuratObject](https://satijalab.github.io/seurat-object/reference/Seurat-class.html) containing normalised counts, PCA embeddings, and cluster assignments. For multi-sample runs, also contains Harmony-integrated embeddings corrected for sequencing technology and capture chemistry. For Visium HD runs, holds the bins of the `--clustering_bin` resolution and, with `--banksy`, the BANKSY assay and embeddings. UMAP has not been computed. Only produced when `--quantification_mode` is set to `clusteredEM`.
@@ -377,20 +414,16 @@ The [RangedSummarizedExperiment](https://www.rdocumentation.org/packages/Summari
 - `counts`: expression estimates
 - `CPM`: sequencing depth normalised estimates
 - `fullLengthCounts`: estimates of read counts mapped as full length reads for each transcript
-- `uniqueCounts`: counts of reads that are uniquely mapped to each transcript 
+- `uniqueCounts`: counts of reads that are uniquely mapped to each transcript
 
 > **Note:** In `se_unique_counts.rds`, unique counts are stored under the `counts` assay, not `uniqueCounts`.
-
-
-### **Fusion Transcript Analysis (Under Development)**
-This feature is still under development and will be released in a future update.
 
 
 ### **Advanced Usage**
 
 **Running Pipeline with a Custom Chemistry or Pre-aligned BAM**
 
-If your dataset uses a chemistry not listed under Supported 10x Library Chemistries, or if you prefer to perform FASTQ preprocessing and genome alignment manually, start the pipeline directly from a pre-processed, demultiplexed BAM file. The BAM file must have the barcode and UMI information encoded either in the `CB`/`UB` column, or in the read name using the format `<barcode>_<umi>#<read_id>`.
+If your dataset uses a chemistry not listed under Supported 10x Library Chemistries, or if you prefer to perform FASTQ preprocessing and genome alignment manually, start the pipeline directly from a pre-processed, demultiplexed BAM file. The BAM file must have the barcode and UMI information encoded in the `CB`/`UB` tags.
 
 *Samplesheet (Custom Chemistry)*
 
@@ -502,7 +535,7 @@ nextflow run . -profile singularity \
 
 *Visium HD*
 
-The same two stages described above applies. Cluster the `gene_counts/gene_counts_<res>/` matrix of whichever resolution you want, then restart with `--visium_hd` and set `--clustering_bin` to that resolution:
+The same two stages described above apply. Cluster the `gene_counts/gene_counts_<res>/` matrix of whichever resolution you want, then restart with `--visium_hd` and set `--clustering_bin` to that resolution:
 
 ```bash
 nextflow run . -profile singularity \
@@ -569,7 +602,7 @@ Sim, A., Ling, M. H., Chen, Y., Lu, H., See, Y. X., Perrin, A., Leng Agnes, O. B
 The following are citations for the other tools used in this pipeline:
 
 #### Banksy
-Singhal, V., Chou, N., Lee, J., Yue, Y., Liu, J., Chock, W. K., Lin, L., Chang, Y.-C., Teo, E. M. L., Aow, J., Lee, H. K., Chen, K. H., & Prabhakar, S. (2024, February 27). Banksy unifies cell typing and tissue domain segmentation for scalable spatial omics data analysis. Nature News. https://www.nature.com/articles/s41588-024-01664-3 
+Singhal, V., Chou, N., Lee, J., Yue, Y., Liu, J., Chock, W. K., Lin, L., Chang, Y.-C., Teo, E. M. L., Aow, J., Lee, H. K., Chen, K. H., & Prabhakar, S. (2024, February 27). Banksy unifies cell typing and tissue domain segmentation for scalable spatial omics data analysis. Nature Genetics. https://www.nature.com/articles/s41588-024-01664-3
 
 #### Chopper
 De Coster Wouter, & Rademakers, R. (2023). NanoPack2: Population scale evaluation of long-read sequencing data. Bioinformatics, 39(5). https://doi.org/10.1093/bioinformatics/btad311
