@@ -24,6 +24,7 @@ include { EXTRACT_SPOT_BARCODES }                from './modules/bambu/visium_hd
 include { MAP_CLUSTERS_TO_2UM_SPOTS }            from './modules/bambu/visium_hd/map_clusters_to_2um_spots.nf'
 include { CONVERT_BARCODE_MAPPINGS }             from './modules/prepare_input/visium_hd/convert_barcode_mappings.nf'
 include { SPOT_BIN_MAPPINGS }                    from './modules/prepare_input/visium_hd/spot_bin_mappings.nf'
+include { FILTER_BARCODED_BAM }                  from './modules/prepare_input/shared/filter_barcoded_bam.nf'
 include { SEURAT_VISIUM_HD }                     from './modules/seurat/visium_hd/clustering.nf'
 
 params {
@@ -39,6 +40,7 @@ params {
     deduplicate_umis: Boolean
     quantification_mode: String
     seurat_resolution: Float
+    loupe_alignment: Path?
     visium_hd: Boolean
     barcode_mappings: Path?
     bins: Path?
@@ -56,6 +58,7 @@ workflow STANDARD {
     ch_annotation: Path
     ndr: Float?
     manual_clustering: Boolean
+    loupe_alignment: Path?
 
     main:
     if (!manual_clustering) {
@@ -68,7 +71,7 @@ workflow STANDARD {
 
         ch_n_samples = ch_rows.count()
 
-        PREPARE_INPUT_STANDARD(ch_rows, ch_barcode_coordinate_config)
+        PREPARE_INPUT_STANDARD(ch_rows, ch_barcode_coordinate_config, loupe_alignment)
 
         // input files are split by type (fastq, bam)
         ch_input_fastq = PREPARE_INPUT_STANDARD.out.fastq
@@ -82,6 +85,17 @@ workflow STANDARD {
         if (!params.bam_only) {
             // process bam samples
             ch_bam_files = ALIGNMENT.out.bam.mix(ch_input_bam)
+
+            // remove out-of-tissue barcodes from visium BAMs using the Loupe alignment's tissue selection
+            if (loupe_alignment != null) {
+                ch_bam_branched = ch_bam_files.branch { _sample, _path, meta ->
+                    visium: meta.chemistry.startsWith('visium')
+                    other:  true
+                }
+                FILTER_BARCODED_BAM(ch_bam_branched.visium, PREPARE_INPUT_STANDARD.out.tissue_barcodes)
+                ch_bam_files = FILTER_BARCODED_BAM.out.bam.mix(ch_bam_branched.other)
+            }
+
             BAMBU_PREPARE_ANNOTATION(ch_annotation)
             BAMBU_CONSTRUCT_READ_CLASS(ch_bam_files, ch_genome, BAMBU_PREPARE_ANNOTATION.out.annotation)
 
@@ -231,7 +245,7 @@ workflow {
     if (params.visium_hd) {
         VISIUM_HD(ch_rows, ch_genome, ch_annotation, params.ndr, params.manual_clustering)
     } else {
-        STANDARD(ch_rows, ch_genome, ch_annotation, params.ndr, params.manual_clustering)
+        STANDARD(ch_rows, ch_genome, ch_annotation, params.ndr, params.manual_clustering, params.loupe_alignment)
     }
 
     channel.topic('versions').collectFile(name: 'software_versions.yml', storeDir: "${params.output_dir}")

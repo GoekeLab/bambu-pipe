@@ -23,7 +23,7 @@ process MINIMAP_ALIGNMENT{
         preset="splice"
     fi
 
-    minimap2 -ax \$preset -uf --junc-bed $bed -t $task.cpus $ref_mmi $newfastq | \
+    minimap2 -ax \$preset -y -uf --junc-bed $bed -t $task.cpus $ref_mmi $newfastq | \
     samtools sort -@ $task.cpus -o ${sample}_demultiplexed.bam
     samtools index -@ $task.cpus ${sample}_demultiplexed.bam
 
