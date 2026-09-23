@@ -4,6 +4,11 @@ This file contains all notable changes to Bambu-Pipe.
 
 ---
 
+## [v0.10.2] - 2026-09-23
+
+### Fixed
+- `--output_dir` is now typed as `String` instead of `Path`; typed `Path` params must already exist, so a new output directory failed validation when the trace, timeline, report and DAG reports (which create it first) were disabled
+
 ## [v0.10.1] - 2026-08-26
 
 ### Added

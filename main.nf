@@ -31,7 +31,7 @@ params {
     input: Path
     genome: Path
     annotation: Path
-    output_dir: Path
+    output_dir: String
     chemistry: String?
     technology: String?
     bam_only: Boolean
