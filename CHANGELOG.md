@@ -4,6 +4,15 @@ This file contains all notable changes to Bambu-Pipe.
 
 ---
 
+## [v0.10.3] - 2026-10-01
+
+### Changed
+- Increased the minimum adapter overlap in the `PREPROCESS_FASTQ` adapter re-search from the cutadapt default (3 bp) to 10 bp, reducing the number of valid reads discarded due to short chance matches at read ends
+
+### Fixed
+- Corrected the 10x3v3 and 10x3v4 end adapter (`rev_primer_f`/`rev_primer_r` in `adapter_seq_config.csv`) to `CCCATGTACTCTGCGTTGATACCACTGCTT`, matching 10x3v2 and Visium; the previous sequence does not occur in these reads, so the adapter was rarely trimmed
+- Resolved an edge case where `PREPROCESS_FASTQ` failed if the input FASTQ filename had the same length as the barcode (16) or UMI (10/12) pattern; the unquoted `?` wildcards in the flexiplex pattern were expanded by the shell to match the filename, which was not intended
+
 ## [v0.10.2] - 2026-09-23
 
 ### Fixed
