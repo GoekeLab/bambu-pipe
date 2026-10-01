@@ -97,17 +97,15 @@ sample,path,chemistry,technology
 
 *Supported 10x Library Chemistries*
 
-For the following chemistries, the pipeline handles the full workflow — FASTQ preprocessing, genome alignment, and transcript discovery and quantification. Please specify the sample chemistry in the samplesheet as shown:
+For the following chemistries, the pipeline handles the full workflow — FASTQ preprocessing, genome alignment, and transcript discovery and quantification. Please specify the sample chemistry in the samplesheet as shown (see 10x Genomics' [long-read compatibility article](https://kb.10xgenomics.com/s/article/10618695456781-Which-10x-Genomics-assays-are-compatible-with-long-read-sequencing-applications)):
 - `10x3v2` (Single Cell 3' v2)
-- `10x3v3` (Single Cell 3' v3 & Next GEM Single Cell 3' v3.1)
-- `10x3v4` (GEM-X Single Cell 3' v4)
-- `10x5v2` (Single Cell 5' v2)
-- `10x5v3` (GEM-X Single Cell 5' v3)
-- `visium-v1` (Visium Spatial Gene Expression Slide 6.5 mm; serial prefix V1)
-- `visium-v2` (Visium Spatial Gene Expression Slide 6.5 mm; serial prefix V2)
-- `visium-v3` (Visium Spatial Gene Expression Slide 6.5 mm; serial prefix V3)
-- `visium-v4` (Visium CytAssist Spatial Gene Expression Slide 6.5 mm; serial prefix V4)
-- `visium-v5` (Visium CytAssist Spatial Gene Expression Slide 11 mm; serial prefix V5)
+- `10x3v3` (Universal 3' Gene Expression – Single Cell 3' v3 & Next GEM 3' v3.1)
+- `10x3v4` (Universal 3' Gene Expression – GEM-X 3' v4)
+- `10x5v2` (Universal 5' Gene Expression – Next GEM 5' v2)
+- `10x5v3` (Universal 5' Gene Expression – GEM-X 5' v3)
+- `visium-v1` (Visium Spatial Gene Expression for Fresh Frozen; slide serial prefix V1)
+- `visium-v2` (Visium Spatial Gene Expression for Fresh Frozen; slide serial prefix V2)
+- `visium-v3` (Visium Spatial Gene Expression for Fresh Frozen; slide serial prefix V3)
 
 > **Note:** Visium Spatial Gene Expression samples (`visium-v*`) must be run one at a time and require a Loupe manual alignment file. See the [Visium Spatial Gene Expression](#visium-spatial-gene-expression) section for details.
 
@@ -117,7 +115,7 @@ If your dataset uses a chemistry not listed above, or if you prefer to handle FA
 
 *Visium HD*
 
-The pipeline also supports Visium HD samples. See the [Visium HD](#visium-hd) section for more details.
+The pipeline also supports Visium HD 3' Spatial Gene Expression samples. See the [Visium HD](#visium-hd) section for more details.
 
 **Pipeline Configuration**
 
