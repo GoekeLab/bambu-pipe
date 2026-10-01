@@ -64,7 +64,7 @@ process PREPROCESS_FASTQ {
             flexiplex_f=$params.flexiplex_f_3prime
         fi
 
-        flexiplex -p $task.cpus -k \$barcode_list \$flank_seq -f \$flexiplex_f -e $params.flexiplex_e
+        flexiplex -p $task.cpus -k \$barcode_list "\${flank_seq[@]}" -f \$flexiplex_f -e $params.flexiplex_e
     }
 
     # Trims reverse primer with cutadapt
@@ -72,7 +72,8 @@ process PREPROCESS_FASTQ {
         cutadapt -a \$rev_primer_f --cores $task.cpus -
     }
 
-    # Re-searches all primer and TSO sequences to remove non-standard reads 
+    # Re-searches all primer and TSO sequences to remove non-standard reads
+    # (--overlap 10: require >=10 bp of adapter overlap so we do not discard too many reads)
     cutadapt_re_search() {
         if [[ $meta.chemistry == 10x5* ]]; then
             args="-b \$fwd_primer_f -b \$fwd_primer_r -b \$TSO_f -b \$TSO_r -b \$rev_primer_f -b \$rev_primer_r"
@@ -80,7 +81,7 @@ process PREPROCESS_FASTQ {
             args="-b \$fwd_primer_f -b \$fwd_primer_r -b \$rev_primer_f -b \$rev_primer_r"
         fi
         
-        cutadapt \$args --action none --discard --cores $task.cpus -
+        cutadapt \$args --overlap 10 --action none --discard --cores $task.cpus -
     }
 
     # Reverse complements FASTQ reads to orient them in the transcript direction (for 3' and visium chemistries only)
@@ -102,7 +103,8 @@ process PREPROCESS_FASTQ {
     # Extract chemistry specfic parameters from config files
     IFS=',' read -r _ left_flank barcode umi right_flank < <(awk -F',' -v chem=$meta.chemistry '\$1 == chem' $flank_seq_config)
     IFS=',' read -r _ fwd_primer_f fwd_primer_r rev_primer_f rev_primer_r TSO_f TSO_r < <(awk -F',' -v chem=$meta.chemistry '\$1 == chem' $adapter_seq_config)
-    flank_seq="-x \$left_flank -b \$barcode -u \$umi -x \$right_flank"
+    # Store flexiplex search pattern as an array so the '?' wildcards are not expanded as shell globs
+    flank_seq=(-x "\$left_flank" -b "\$barcode" -u "\$umi" -x "\$right_flank")
 
     # Flexiplex filter (barcode filtering)
     # For visium chemistries, search the whole rank curve instead
@@ -112,7 +114,7 @@ process PREPROCESS_FASTQ {
     else
         max_rank_arg=""
     fi
-    flexiplex -p $task.cpus \$flank_seq -f 0 ${sample}_chopper_out.fastq
+    flexiplex -p $task.cpus "\${flank_seq[@]}" -f 0 ${sample}_chopper_out.fastq
     flexiplex-filter \$max_rank_arg -w $whitelist --outfile my_filtered_barcode_list.txt flexiplex_barcodes_counts.txt
 
     # Chain commands: Flexiplex demultiplexing -> (Optional) Save intermediate file after flexiplex -> Cutadapt trimming of reverse primer -> \
