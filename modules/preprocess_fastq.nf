@@ -106,21 +106,21 @@ process PREPROCESS_FASTQ {
     # Store flexiplex search pattern as an array so the '?' wildcards are not expanded as shell globs
     flank_seq=(-x "\$left_flank" -b "\$barcode" -u "\$umi" -x "\$right_flank")
 
-    # Flexiplex filter (barcode filtering)
-    # For visium chemistries, search the whole rank curve instead
-    # (previous runs using the default parameters failed to search the whole rank curve for the inflection point)
+    # Barcode list for demultiplexing
+    # For visium chemistries, every whitelisted barcode is a spot on the slide, so demultiplex against the whitelist directly
+    # For single cell chemistries, discover barcodes, then filter them with the whitelist and inflection point (flexiplex-filter)
     if [[ $meta.chemistry == visium-v* ]]; then
-        max_rank_arg="-u 0"
+        barcode_list=$whitelist
     else
-        max_rank_arg=""
+        flexiplex -p $task.cpus "\${flank_seq[@]}" -f 0 ${sample}_chopper_out.fastq
+        flexiplex-filter -w $whitelist --outfile my_filtered_barcode_list.txt flexiplex_barcodes_counts.txt
+        barcode_list=my_filtered_barcode_list.txt
     fi
-    flexiplex -p $task.cpus "\${flank_seq[@]}" -f 0 ${sample}_chopper_out.fastq
-    flexiplex-filter \$max_rank_arg -w $whitelist --outfile my_filtered_barcode_list.txt flexiplex_barcodes_counts.txt
 
     # Chain commands: Flexiplex demultiplexing -> (Optional) Save intermediate file after flexiplex -> Cutadapt trimming of reverse primer -> \
     # Cutadapt re-search for all primer and TSO sequences to remove non-standard reads -> Reverse complementation of reads for 3' and visium chemistry -> Compression with pigz
     cat ${sample}_chopper_out.fastq | 
-    flexiplex_demux my_filtered_barcode_list.txt | 
+    flexiplex_demux \$barcode_list |
     save_intermediate "${sample}_intermediate_flexiplex.fastq.gz" | 
     cutadapt_trim | 
     cutadapt_re_search | 
