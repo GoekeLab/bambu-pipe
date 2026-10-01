@@ -8,6 +8,12 @@ This file contains all notable changes to Bambu-Pipe.
 
 ### Changed
 - Increased the minimum adapter overlap in the `PREPROCESS_FASTQ` adapter re-search from the cutadapt default (3 bp) to 10 bp, reducing the number of valid reads discarded due to short chance matches at read ends
+- Shortened the polyT right flank for 3' and Visium chemistries (`flank_seq_config.csv`) from 30 T to 9 T, matching the flexiplex presets; ONT reads rarely call the full 30 T homopolymer, so few reads matched the flank during barcode discovery
+- Visium samples (`visium-v*`) are now demultiplexed directly against the spot whitelist, as recommended by flexiplex; barcode discovery and flexiplex-filter are skipped, replacing the `-u 0` knee detection workaround
+- Updated the supported chemistry names in the README to the official 10x Genomics assay names, with a link to the 10x Genomics long-read compatibility article
+
+### Removed
+- `visium-v4` and `visium-v5` (Visium CytAssist Spatial Gene Expression) chemistries, as these probe-based assays do not produce full-length transcripts
 
 ### Fixed
 - Corrected the 10x3v3 and 10x3v4 end adapter (`rev_primer_f`/`rev_primer_r` in `adapter_seq_config.csv`) to `CCCATGTACTCTGCGTTGATACCACTGCTT`, matching 10x3v2 and Visium; the previous sequence does not occur in these reads, so the adapter was rarely trimmed
