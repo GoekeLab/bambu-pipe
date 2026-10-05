@@ -65,9 +65,9 @@ workflow STANDARD {
         def ndrArg = ndr != null ? ndr : 'NULL'
 
         // load config files
-        ch_barcode_coordinate_config = file("${projectDir}/assets/10x_config/barcode_coordinate_config.csv", checkIfExists: true)
-        ch_adapter_seq_config = file("${projectDir}/assets/10x_config/adapter_seq_config.csv", checkIfExists: true)
-        ch_flank_seq_config = file("${projectDir}/assets/10x_config/flank_seq_config.csv", checkIfExists: true)
+        ch_barcode_coordinate_config = file("${projectDir}/assets/barcode_coordinate_config.csv", checkIfExists: true)
+        ch_cutadapt_config = file("${projectDir}/assets/cutadapt_config.csv", checkIfExists: true)
+        ch_flexiplex_config = file("${projectDir}/assets/flexiplex_config.csv", checkIfExists: true)
 
         ch_n_samples = ch_rows.count()
 
@@ -79,7 +79,7 @@ workflow STANDARD {
 
         // process fastq samples
         ch_preprocess_fastq_in = ch_input_fastq.map { sample, path, meta -> [sample, path, meta, meta.barcode] } // add whitelist path to fastq input tuple
-        PREPROCESS_FASTQ(ch_preprocess_fastq_in, ch_flank_seq_config, ch_adapter_seq_config)
+        PREPROCESS_FASTQ(ch_preprocess_fastq_in, ch_flexiplex_config, ch_cutadapt_config)
         ALIGNMENT(PREPROCESS_FASTQ.out.fastq, ch_genome, ch_annotation)
 
         if (!params.bam_only) {

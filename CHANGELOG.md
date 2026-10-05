@@ -8,15 +8,17 @@ This file contains all notable changes to Bambu-Pipe.
 
 ### Changed
 - Increased the minimum adapter overlap in the `PREPROCESS_FASTQ` adapter re-search from the cutadapt default (3 bp) to 10 bp, reducing the number of valid reads discarded due to short chance matches at read ends
-- Shortened the polyT right flank for 3' and Visium chemistries (`flank_seq_config.csv`) from 30 T to 9 T, matching the flexiplex presets; ONT reads rarely call the full 30 T homopolymer, so few reads matched the flank during barcode discovery
+- Shortened the polyT right flank for 3' and Visium chemistries (`flexiplex_config.csv`) from 30 T to 9 T, matching the flexiplex presets; ONT reads rarely call the full 30 T homopolymer, so few reads matched the flank during barcode discovery
 - Visium samples (`visium-v*`) are now demultiplexed directly against the spot whitelist, as recommended by flexiplex; barcode discovery and flexiplex-filter are skipped, replacing the `-u 0` knee detection workaround
 - Updated the supported chemistry names in the README to the official 10x Genomics assay names, with a link to the 10x Genomics long-read compatibility article
+- flexiplex flank (`-f`) and barcode (`-e`) edit distances are now set per chemistry in `flexiplex_config.csv` (`flank_max_edit_distance`, `barcode_max_edit_distance`), using the flexiplex preset defaults (`-f 8`, `-e 2`); this replaces the `flexiplex_f_5prime`, `flexiplex_f_3prime` and `flexiplex_e` developer parameters. The previous `-f 13` for 3' and Visium chemistries allowed too many errors for the shortened 9 T flank, causing spurious flank matches that slowed `PREPROCESS_FASTQ` considerably
+- Moved the 10x config files out of `assets/10x_config/` into `assets/`, and renamed `adapter_seq_config.csv` to `cutadapt_config.csv` and `flank_seq_config.csv` to `flexiplex_config.csv`
 
 ### Removed
 - `visium-v4` and `visium-v5` (Visium CytAssist Spatial Gene Expression) chemistries, as these probe-based assays do not produce full-length transcripts
 
 ### Fixed
-- Corrected the 10x3v3 and 10x3v4 end adapter (`rev_primer_f`/`rev_primer_r` in `adapter_seq_config.csv`) to `CCCATGTACTCTGCGTTGATACCACTGCTT`, matching 10x3v2 and Visium; the previous sequence does not occur in these reads, so the adapter was rarely trimmed
+- Corrected the 10x3v3 and 10x3v4 end adapter (`rev_primer_f`/`rev_primer_r` in `cutadapt_config.csv`) to `CCCATGTACTCTGCGTTGATACCACTGCTT`, matching 10x3v2 and Visium; the previous sequence does not occur in these reads, so the adapter was rarely trimmed
 - Resolved an edge case where `PREPROCESS_FASTQ` failed if the input FASTQ filename had the same length as the barcode (16) or UMI (10/12) pattern; the unquoted `?` wildcards in the flexiplex pattern were expanded by the shell to match the filename, which was not intended
 
 ## [v0.10.2] - 2026-09-23
