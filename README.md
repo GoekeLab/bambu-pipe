@@ -293,8 +293,10 @@ output/
 │
 ├── bam/
 │   ├── <sample>_demultiplexed.bam
-│   └── <sample>_demultiplexed.bam.bai
-│    # (one pair per sample for multi-sample runs)
+│   ├── <sample>_demultiplexed.bam.bai
+│   ├── <sample>_filtered.bam        # Visium samples only (out-of-tissue reads removed)
+│   └── <sample>_filtered.bam.bai
+│    # (for multi-sample runs, each sample has its own .bam and .bai)
 │
 ├── extended_annotations.gtf
 │
@@ -354,6 +356,10 @@ output/
 ├── software_versions.yml
 │
 ├── pipeline_info/
+│
+├── bam/
+│   ├── <sample>_filtered.bam        # out-of-tissue reads removed
+│   └── <sample>_filtered.bam.bai
 │
 ├── extended_annotations.gtf
 │

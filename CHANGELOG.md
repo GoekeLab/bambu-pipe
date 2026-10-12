@@ -4,6 +4,11 @@ This file contains all notable changes to Bambu-Pipe.
 
 ---
 
+## [v0.10.4] - 2026-10-12
+
+### Changed
+- The filtered BAM produced for Visium and Visium HD samples (`<sample>_filtered.bam` and `.bai`) is now always published to `bam/`, instead of `intermediate_bam/` only with `--save_intermediates`
+
 ## [v0.10.3] - 2026-10-01
 
 ### Changed

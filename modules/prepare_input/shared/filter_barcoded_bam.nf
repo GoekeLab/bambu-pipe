@@ -1,5 +1,5 @@
 process FILTER_BARCODED_BAM {
-    publishDir "$params.output_dir/intermediate_bam", mode: 'copy', pattern: '*_filtered.bam*', enabled: params.save_intermediates
+    publishDir "${params.output_dir}/bam", mode: 'copy', pattern: '*_filtered.bam*'
     label "minimap2_samtools"
     label "medium_cpu"
     label "medium_mem"
