@@ -4,6 +4,49 @@ This file contains all notable changes to Bambu-Pipe.
 
 ---
 
+## [v0.10.4] - 2026-11-19
+
+### Added
+- `--flexiplex_full_rank_search` for 10x Single Cell chemistries, which makes flexiplex-filter search the whole barcode rank curve for the inflection point (`-u 0`); the default search stops at the 95th percentile of barcode counts and can remove real cells in some samples
+- `single_cpu` process label (1 CPU) for single-threaded processes
+- `max_forks_rc` developer parameter (default 4; 100 with the `hpc` profile, where each task is its own job), the number of `BAMBU_CONSTRUCT_READ_CLASS` tasks that run at once; each task loads its whole BAM into memory, so running every sample at once multiplied the peak memory
+- `--min_read_fraction_by_gene` (default 0.05), the minimum fraction of its gene's reads a novel transcript needs in at least one sample to be kept during transcript discovery
+- `--seurat_dims` (default 30), the number of principal components used for clustering in every workflow
+- `harmony_seed` developer parameter (default 42), the random seed for Harmony, so multi-sample clusters are reproducible
+
+### Changed
+- With the developer parameter `bambu_path` set, its directory is now mounted into the containers (singularity and docker profiles), so the local Bambu can be loaded
+- Seurat container `bambu-pipe-seurat:1.0.1`: R packages are now installed at fixed versions with `remotes::install_version`, with the same versions as 1.0.0 (Seurat 5.4.0, SeuratObject 5.3.0, harmony 1.2.4, R.utils 2.13.0, Banksy 1.6.0 from Bioconductor 3.22, SeuratWrappers at `9586c29`)
+- The filtered BAM produced for Visium and Visium HD samples (`<sample>_filtered.bam` and `.bai`) is now always published to `bam/`, instead of `intermediate_bam/` only with `--save_intermediates`
+- Transcript discovery (`BAMBU_TRANSCRIPT_DISCOVERY`, `BAMBU_TRANSCRIPT_DISCOVERY_VISIUM_HD`) now runs on a fixed 2 cores (`discovery_ncore`), instead of the `medium_cpu` allocation (16–64)
+- CPU labels no longer grow with retries: `low_cpu` is 4, `medium_cpu` 16 and `high_cpu` 32 CPUs on every attempt; retries still double memory and extend time
+- `BAMBU_CONSTRUCT_READ_CLASS`, `BAMBU_PREPARE_ANNOTATION`, `PAFTOOLS_GFF2BED`, `EXTRACT_SPOT_BARCODES`, `AGGREGATE_BINS_VISIUM_HD`, `MAP_CLUSTERS_TO_2UM_SPOTS`, `VISIUM_BUILD_TISSUE_POSITIONS`, `CONVERT_BARCODE_MAPPINGS`, `CONVERT_TISSUE_POSITIONS` and `SPOT_BIN_MAPPINGS` now use `single_cpu`, instead of `low_cpu` (4–16), as they run on one core
+- `BAMBU_CONSTRUCT_READ_CLASS` now runs bambu at its default `ncore` (1), instead of `ncore = task.cpus`; each task processes one BAM, so the extra cores were unused
+- Failed steps are retried at most twice (was 3 times), and R errors (exit code 1) in Bambu and Seurat steps only once, since an ordinary R error exits with the same code as a BiocParallel worker running out of memory; the largest memory request drops from 1024 GB to 512 GB
+- Single- and multi-sample Seurat clustering are now one process, `SEURAT_CLUSTERING` (replacing `SEURAT_SINGLE_SAMPLE`, `SEURAT_MULTI_SAMPLE` and the `CLUSTERING` subworkflow). All runs now use Seurat's default 2,000 variable genes (single-sample runs used 2,500), 30 principal components by default (single-sample runs used 15) and the `high_mem` label, and `seurat_obj.rds` names the cluster column `clusters` (multi-sample runs used `harmony_clusters`)
+- **Breaking:** a `--manual_clustering` restart now takes `--clusters`, `--quant_data` and `--extended_annotations`, instead of a samplesheet (`clusters_path`, `quant_data_path`) and an `extended_annotations.rds` given to `--annotation`. A restart takes no `--input`, `--genome` or `--annotation`; passing them, or the restart flags without `--manual_clustering`, stops the pipeline with an error. `--quantification_mode` is ignored on a restart
+- `SEURAT_VISIUM_HD` is renamed `SEURAT_CLUSTERING_VISIUM_HD`; Visium HD clustering with `--banksy false` now uses 30 principal components by default (was 15)
+- The quantification processes (`BAMBU_CLUSTER_LEVEL_QUANTIFICATION`, `BAMBU_SINGLE_CELL_QUANTIFICATION`, `BAMBU_SPOT_LEVEL_QUANTIFICATION`) no longer take the reference genome, which Bambu does not use when quantifying
+
+### Removed
+- `--deduplicate_umis`, which has had no effect since v0.9: Bambu always deduplicates UMIs in single-cell mode
+- `--chemistry` and `--technology`, which have had no effect since v0.9; set `chemistry` and `technology` in the samplesheet
+- `seurat_dim_single` and `seurat_dim_multi` developer parameters, replaced by `--seurat_dims`
+- The unused fusion detection code (`bin/JAFFAL.groovy`, `bin/fusion_detection*.R`, `jaffal/`) and the `fusion_mode`, `jaffal_ref_dir` and `jaffal_code_dir` developer parameters
+
+### Fixed
+- The pipeline failed to compile on Nextflow 26.10 ("Process `…` cannot be used as a variable"): `main.nf` no longer enables static typing (`nextflow.enable.types`), whose rules Nextflow 26.10 now enforces; the typed `params` block, and the conversion of command-line values to each parameter's type, are unchanged
+- A sample whose file had an unsupported extension (e.g. `.FASTQ.GZ`, `.fq.bz2`, `.cram`) was silently dropped from the run; the pipeline now stops with an error naming the sample and the supported extensions (`.fastq`, `.fq`, `.fastq.gz`, `.fq.gz`, `.bam`)
+- `--annotation` now accepts GTF only (`.gtf`/`.gtf.gz`). A GFF3 file was read by Bambu without an error into a wrong annotation (each exon a separate transcript), and the README listed `.gff`/`.gff.gz` as supported
+- A `--manual_clustering` restart samplesheet with several rows ran several quantifications whose outputs overwrote each other, and a missing column failed with an unclear error; restarts now take one file per flag
+- Duplicate sample names are now rejected before any sample is processed; previously the samples were aligned and processed twice before transcript discovery failed on a file name collision
+- The samplesheet is now validated as a whole before any sample is processed (each row, duplicate names, the one-sample rule for Visium, `--loupe_alignment` without a Visium sample, and an empty samplesheet); previously the Visium checks ran beside the first alignment jobs
+- `--banksy_lambda` (0–1) and `--banksy_k_geom` (at least 1) are now validated at launch
+- Multi-sample Harmony integration now corrects for sequencing technology and capture chemistry, as documented: Seurat's `IntegrateLayers(method = HarmonyIntegration)` ignored `group.by.vars` and corrected by sample. Harmony now runs through `RunHarmony` on whichever of technology and chemistry differ between samples (it is skipped when neither does), and is seeded, so reruns give the same clusters
+- The example Seurat objects (`examples/seurat_obj_single_sample.rds`, `examples/seurat_obj_multi_sample.rds`) are regenerated, and the README's visualisation examples now use the `clusters` and `sampleName` columns (the multi-sample example used a `sample` column that runs no longer produce)
+- Rerunning into an existing `--output_dir` kept the earlier run's `pipeline_info/` reports ("Failed to render execution report"); the timeline, report, trace and DAG are now overwritten
+- The README described the cluster-level count columns as `clusterId` for single-sample runs; they are always `sampleName_clusterId` (e.g. `sample1_cluster_0`), and barcodes are always `sampleName_barcode`
+
 ## [v0.10.3] - 2026-10-01
 
 ### Changed

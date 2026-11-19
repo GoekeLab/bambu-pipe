@@ -58,12 +58,12 @@ nextflow run main.nf \
 
 **Samplesheet (CSV)**
 
-The pipeline requires a `.csv` formatted samplesheet to define the input data. This file is mandatory, regardless of the number of samples being processed. Each row in the samplesheet represents a single sample and its corresponding file path and metadata.
+The pipeline requires a `.csv` formatted samplesheet to define the input data. The samplesheet is required for all runs, regardless of the number of samples, except when restarting the pipeline after manual clustering; see Clustering Outside the Pipeline in [Advanced Usage](#advanced-usage). Each row in the samplesheet represents a single sample and its corresponding file path and metadata.
 
 *Required Columns*
 
 The samplesheet must include the following columns:
-- `sample`: sample name (no spaces or non-alphanumeric characters)
+- `sample`: unique sample name (no spaces or non-alphanumeric characters)
 - `path`: path to the input file (`fastq` or `bam`)
 - `chemistry`: 10x library chemistry (see Supported 10x Library Chemistries below)
 - `technology`: sequencing technology (`ONT` or `PacBio`)
@@ -73,8 +73,10 @@ The samplesheet must include the following columns:
 *Supported Input Formats*
 
 The `path` column can point to the following file types:
-- `fastq`: Raw reads (compressed `.gz` or uncompressed)
-- `bam`: Demultiplexed and aligned reads
+- `fastq`: Raw reads, ending in `.fastq`, `.fq`, `.fastq.gz` or `.fq.gz`
+- `bam`: Demultiplexed and aligned reads, ending in `.bam`
+
+A file with any other extension stops the pipeline with an error.
 
 For more details on starting the pipeline directly from BAM, please refer to the [Advanced Usage](#advanced-usage) section.
 
@@ -92,7 +94,7 @@ sample,path,chemistry,technology
 10x5v3_ONT_example,examples/10x5v3_ONT_example_demultiplexed.bam,10x5v3,ONT
 ```
 
-> **Note:** Example samplesheets are provided in `examples/`. If all samples share the same library chemistry and/or sequencing technology, you may omit the `chemistry` and `technology` columns and use the `--chemistry` and `--technology` flags instead.
+> **Note:** Example samplesheets are provided in `examples/`.
 
 
 *Supported 10x Library Chemistries*
@@ -133,25 +135,32 @@ To configure the executor and container, pass profile types via the `-profile` a
 
 ### **Parameters**
 
-**Mandatory**
+**Required for a new run**
 - `--input` [string]: Path to the samplesheet `.csv` file
 - `--genome` [string]: Path to the reference genome `.fa`, `.fasta`, or `.fa.gz` file
-- `--annotation` [string]: Path to the reference annotation `.gtf`, `.gff`, `.gtf.gz`, or `.gff.gz` file. When restarting the pipeline with `--manual_clustering`, provide the `extended_annotations.rds` file instead
+- `--annotation` [string]: Path to the reference annotation `.gtf` or `.gtf.gz` file
+
+**Required when restarting the pipeline after manual clustering**
+
+See Clustering Outside the Pipeline in [Advanced Usage](#advanced-usage) for details. When restarting, leave out `--input`, `--genome` and `--annotation`.
+- `--manual_clustering` [boolean, default: false]: Restart the pipeline to quantify transcripts in clusters generated outside the pipeline
+- `--clusters` [string]: Path to the cluster assignment `.csv` (`id` and `cluster` columns)
+- `--quant_data` [string]: Path to `quant_data.rds` from the first run's `intermediate_R/`
+- `--extended_annotations` [string]: Path to `extended_annotations.rds` from the first run's `intermediate_R/`
 
 **Optional**
 - `--output_dir` [string, default: 'output']: Path to the output directory
-- `--chemistry` [string, default: null]: Specify if all samples in the samplesheet share the same library chemistry
-- `--technology` [string, default: null]: Specify if all samples in the samplesheet share the same sequencing technology
 - `--bam_only` [boolean, default: false]: If true, stops the pipeline after genome alignment and saves BAM files only (see Advanced Usage section)
 - `--qscore_filtering` [boolean, default: true]: Enable or disable quality score filtering of reads
+- `--flexiplex_full_rank_search` [boolean, default: false]: If true, flexiplex-filter searches the whole barcode rank curve for the inflection point (`-u 0`). Use it if fewer cells are detected than expected. 10x Single Cell chemistries only (see [Barcode Calling](#barcode-calling))
 - `--ndr` [float, default: null]: NDR threshold for Bambu transcript discovery. If not set, Bambu will recommend a suitable value
-- `--deduplicate_umis` [boolean, default: true]: If true, Bambu will perform UMI deduplication
+- `--min_read_fraction_by_gene` [float, default: 0.05]: Minimum fraction of its gene's reads that a novel transcript must have in at least one sample to be kept during transcript discovery. Must be between 0 and 1
 - `--quantification_mode` [string, default: "clusteredEM"]: Quantification mode for transcript counts. Available options are:
   - "no_quant": Transcript quantification is not performed
   - "EM": Performs transcript quantification for each cell/spatial coordinate
   - "clusteredEM": Performs gene expression-based cell clustering using [Seurat](https://satijalab.org/seurat/), followed by transcript quantification at the cluster level
 - `--seurat_resolution` [float, default: 0.8]: Seurat clustering resolution
-- `--manual_clustering` [boolean, default: false]: If true, skips clustering and quantifies from cluster assignments generated outside the pipeline (see Advanced Usage section)
+- `--seurat_dims` [integer, default: 30]: Number of principal components used for clustering, between 2 and 50
 
 **Visium**
 
@@ -166,12 +175,15 @@ See the [Visium HD](#visium-hd) section for the required input files and samples
 - `--clustering_bin` [integer, default: 8]: Bin size (µm) to cluster at. Must be one of the values in `--bins`.
 - `--barcode_mappings` [string, default: null]: Path to the Space Ranger `barcode_mappings.parquet`. Required whenever a bin coarser than 2 µm is listed in `--bins` (e.g. 8 µm)
 - `--banksy` [boolean, default: true]: If true, clusters with [Banksy](https://github.com/prabhakarlab/Banksy) using both expression and spatial position. If false, clusters on gene expression alone
-- `--banksy_lambda` [float, default: 0.8]: Weight given to spatial information
-- `--banksy_k_geom` [integer, default: 50]: Number of spatial neighbours per bin
+- `--banksy_lambda` [float, default: 0.8]: Weight given to spatial information, between 0 and 1
+- `--banksy_k_geom` [integer, default: 50]: Number of spatial neighbours per bin, at least 1
 
 ### **Single Cell Analysis**
 
 By default, the pipeline runs the single-cell workflow described in the [Overview](#overview) and [General Usage](#general-usage) sections. All supported 10x Single Cell chemistries (`10x3v*`, `10x5v*`) follow this workflow, with no additional parameters or input files required.
+
+#### **Barcode Calling**
+During barcode calling, [Flexiplex](https://davidsongroup.github.io/flexiplex/) uses a knee plot of barcode read counts to find an inflection point, and removes the low-count barcodes below it (e.g. empty droplets). By default, the inflection point search is only performed up to the 95th percentile of barcode counts. If fewer cells are detected than expected (e.g., counting unique `CB` tags in `bam/<sample>_demultiplexed.bam`, or columns in the `se_*.rds` objects), re-run with `--flexiplex_full_rank_search true` to search the full rank curve.
 
 ### **Spatial Analysis**
 
@@ -293,8 +305,10 @@ output/
 │
 ├── bam/
 │   ├── <sample>_demultiplexed.bam
-│   └── <sample>_demultiplexed.bam.bai
-│    # (one pair per sample for multi-sample runs)
+│   ├── <sample>_demultiplexed.bam.bai
+│   ├── <sample>_filtered.bam        # Visium samples only (out-of-tissue reads removed)
+│   └── <sample>_filtered.bam.bai
+│    # (for multi-sample runs, each sample has its own .bam and .bai)
 │
 ├── extended_annotations.gtf
 │
@@ -355,6 +369,10 @@ output/
 │
 ├── pipeline_info/
 │
+├── bam/
+│   ├── <sample>_filtered.bam        # out-of-tissue reads removed
+│   └── <sample>_filtered.bam.bai
+│
 ├── extended_annotations.gtf
 │
 ├── unique_counts/
@@ -386,19 +404,19 @@ output/
 | `<sample>_demultiplexed.bam` | BAM file containing all demultiplexed, trimmed and aligned reads, with the barcode and UMI stored in the `CB`/`UB` tags
 | `<sample>_demultiplexed.bam.bai` | BAM index for the corresponding BAM file
 | `extended_annotations.gtf` | A `.gtf` file containing the novel transcripts discovered by Bambu as well as the reference annotations provided by the user.
-| `seurat_obj.rds` | A [SeuratObject](https://satijalab.github.io/seurat-object/reference/Seurat-class.html) containing normalised counts, PCA embeddings, and cluster assignments. For multi-sample runs, also contains Harmony-integrated embeddings corrected for sequencing technology and capture chemistry. For Visium HD runs, holds the bins of the `--clustering_bin` resolution and, with `--banksy`, the BANKSY assay and embeddings. UMAP has not been computed. Only produced when `--quantification_mode` is set to `clusteredEM`.
+| `seurat_obj.rds` | A [SeuratObject](https://satijalab.github.io/seurat-object/reference/Seurat-class.html) containing normalised counts, PCA embeddings, and cluster assignments (the `clusters` column). When samples differ in sequencing technology or capture chemistry, also contains Harmony embeddings (`harmony`) corrected for whichever of these differ. For Visium HD runs, holds the bins of the `--clustering_bin` resolution and, with `--banksy`, the BANKSY assay and embeddings. UMAP has not been computed. Only produced when `--quantification_mode` is set to `clusteredEM`.
 | `unique_counts/se_unique_counts.rds` | A [RangedSummarizedExperiment](https://www.rdocumentation.org/packages/SummarizedExperiment/versions/1.2.3/topics/RangedSummarizedExperiment-class) object containing transcript-level unique counts at single-cell resolution, produced prior to EM quantification. Columns follow the `sampleName_barcode` naming convention.
 | `gene_counts/se_gene_counts.rds` | A RangedSummarizedExperiment object containing gene-level counts at single-cell resolution. Columns follow the `sampleName_barcode` naming convention.
-| `intermediate_R/quant_data.rds` | Bambu's read-to-transcript assignments for the run. Required to restart the pipeline with `--manual_clustering`.
-| `intermediate_R/extended_annotations.rds` | The extended annotations as a GRangesList. Required to restart the pipeline with `--manual_clustering`.
+| `intermediate_R/quant_data.rds` | Bambu's read-to-transcript assignments for the run. Pass to `--quant_data` to restart the pipeline with `--manual_clustering`.
+| `intermediate_R/extended_annotations.rds` | The extended annotations as a GRangesList. Pass to `--extended_annotations` to restart the pipeline with `--manual_clustering`.
 | `transcript_counts_singlecell/se_transcript_counts_singlecell.rds` | A RangedSummarizedExperiment object containing per-cell transcript counts after EM quantification. Columns follow the `sampleName_barcode` naming convention. Only produced when `--quantification_mode` is set to `EM`.
-| `transcript_counts_clusters/se_transcript_counts_clusters.rds` | A RangedSummarizedExperiment object containing cluster-level transcript counts after EM quantification. Columns follow the `clusterId` naming convention for single-sample runs, and `sampleName_clusterId` for multi-sample runs. Only produced when `--quantification_mode` is set to `clusteredEM`.
-| `gene_counts_clusters/se_gene_counts_clusters.rds` | A RangedSummarizedExperiment object containing cluster-level gene counts. Columns follow the `clusterId` naming convention for single-sample runs, and `sampleName_clusterId` for multi-sample runs. Only produced when `--quantification_mode` is set to `clusteredEM`.
+| `transcript_counts_clusters/se_transcript_counts_clusters.rds` | A RangedSummarizedExperiment object containing cluster-level transcript counts after EM quantification. Columns follow the `sampleName_clusterId` naming convention (e.g. `sample1_cluster_0`). Only produced when `--quantification_mode` is set to `clusteredEM`.
+| `gene_counts_clusters/se_gene_counts_clusters.rds` | A RangedSummarizedExperiment object containing cluster-level gene counts. Columns follow the `sampleName_clusterId` naming convention (e.g. `sample1_cluster_0`). Only produced when `--quantification_mode` is set to `clusteredEM`.
 | `unique_counts/unique_counts_<res>/` | Visium HD only. Transcript-level unique counts at resolution `<res>`, produced prior to EM quantification. Columns follow the `sampleName_barcode` naming convention.
 | `gene_counts/gene_counts_<res>/` | Visium HD only. Gene-level counts at resolution `<res>`.
 | `transcript_counts/transcript_counts_<res>/` | Visium HD only. Transcript counts after EM quantification, one directory per resolution. Only produced when `--quantification_mode` is set to `EM`.
 | `<assay>.mtx.gz` | Gzip-compressed sparse count matrix in [Matrix Market Exchange](https://math.nist.gov/MatrixMarket/formats.html) format (features × barcodes), one per assay present in the `SummarizedExperiment` (`counts.mtx.gz`, `CPM.mtx.gz`, `fullLengthCounts.mtx.gz`, `uniqueCounts.mtx.gz`). See the **Count Matrices** section below for what each assay contains.
-| `barcodes.tsv.gz` | Gzip-compressed list of cell barcodes (one per line) corresponding to the columns of each `.mtx.gz`. Barcodes follow the `sampleName_barcode` naming convention for multi-sample runs.
+| `barcodes.tsv.gz` | Gzip-compressed list of cell barcodes (one per line) corresponding to the columns of each `.mtx.gz`. Barcodes follow the `sampleName_barcode` naming convention.
 | `features.tsv.gz` | Gzip-compressed three-column TSV corresponding to the rows of each `.mtx.gz`. Column 1 is the feature ID (transcript ID for transcript-level matrices, gene ID for gene-level matrices). Column 2 is the feature name (same as column 1). Column 3 is the feature type (`Transcript Expression` for transcript-level matrices, `Gene Expression` for gene-level matrices).
 | `software_versions.yml` | A YAML file listing the versions of all software tools used during the pipeline run.
 | `execution_timeline.html` | Pipeline execution timeline. See [Nextflow docs](https://www.nextflow.io/docs/latest/tracing.html#timeline-report).
@@ -473,26 +491,27 @@ The `seurat_obj.rds` output contains PCA embeddings and cluster assignments but 
 library(Seurat)
 
 obj <- readRDS("examples/seurat_obj_single_sample.rds")
-dim <- min(15, ncol(obj[["pca"]]))
+dim <- min(30, ncol(obj[["pca"]]))  # 30 is the --seurat_dims default
 obj <- RunUMAP(obj, dims = 1:dim, reduction = "pca")
-DimPlot(obj, reduction = "umap", label = TRUE)
+DimPlot(obj, reduction = "umap", group.by = "clusters", label = TRUE)
 ```
 
 *Multiple samples*
 
-For multi-sample runs, UMAP is computed from the Harmony-corrected embeddings, and cells can be coloured by cluster, sample, or other metadata.
+When the samples differ in sequencing technology or capture chemistry, the clusters are built on Harmony-corrected embeddings (`harmony`); otherwise on PCA. Compute the UMAP from the same embeddings, then colour cells by cluster, sample, or other metadata.
 ```r
 library(Seurat)
 
 obj <- readRDS("examples/seurat_obj_multi_sample.rds")
-dim <- min(30, ncol(obj[["harmony"]]))
-obj <- RunUMAP(obj, dims = 1:dim, reduction = "harmony")
+reduction <- if ("harmony" %in% Reductions(obj)) "harmony" else "pca"
+dim <- min(30, ncol(obj[[reduction]]))  # 30 is the --seurat_dims default
+obj <- RunUMAP(obj, dims = 1:dim, reduction = reduction)
 
 # Colour by cluster
-DimPlot(obj, reduction = "umap", group.by = "harmony_clusters", label = TRUE)
+DimPlot(obj, reduction = "umap", group.by = "clusters", label = TRUE)
 
 # Colour by sample
-DimPlot(obj, reduction = "umap", group.by = "sample")
+DimPlot(obj, reduction = "umap", group.by = "sampleName")
 ```
 
 **Clustering Outside the Pipeline**
@@ -515,21 +534,18 @@ sample1_AAACCCAAGAAACACT-1,cluster_0
 sample1_AAACCCAAGAAACCAT-1,cluster_1
 ```
 
-Next, restart the pipeline. The samplesheet supplied to `--input` must contain two columns: `clusters_path`, the cluster assignment file, and `quant_data_path`, the `quant_data.rds` written to `intermediate_R/` by the first stage.
-
-```csv
-clusters_path,quant_data_path
-clusters.csv,output/intermediate_R/quant_data.rds
-```
+Next, restart the pipeline with `--manual_clustering`, the cluster assignment file, and the `quant_data.rds` and `extended_annotations.rds` written to `intermediate_R/` by the first stage. A restart takes no samplesheet, genome or annotation; passing `--input`, `--genome` or `--annotation` stops the pipeline with an error.
 
 ```bash
 nextflow run . -profile singularity \
-  --input manual_clusters.csv --genome genome.fa \
-  --annotation output/intermediate_R/extended_annotations.rds \
-  --manual_clustering --output_dir output_manual
+  --manual_clustering \
+  --clusters clusters.csv \
+  --quant_data output/intermediate_R/quant_data.rds \
+  --extended_annotations output/intermediate_R/extended_annotations.rds \
+  --output_dir output_manual
 ```
 
-`--annotation` takes the `extended_annotations.rds` written to `intermediate_R/` by the first stage.
+The restart always quantifies at the cluster level; `--quantification_mode` is ignored.
 
 *Visium HD*
 
@@ -537,11 +553,13 @@ The same two stages described above apply. Cluster the `gene_counts/gene_counts_
 
 ```bash
 nextflow run . -profile singularity \
-  --input manual_clusters.csv --genome genome.fa \
-  --annotation output/intermediate_R/extended_annotations.rds \
+  --manual_clustering \
+  --clusters clusters.csv \
+  --quant_data output/intermediate_R/quant_data.rds \
+  --extended_annotations output/intermediate_R/extended_annotations.rds \
   --visium_hd --clustering_bin 8 \
   --barcode_mappings barcode_mappings.parquet \
-  --manual_clustering --output_dir output_manual
+  --output_dir output_manual
 ```
 
 `--bins` is not needed on the restart, and `--barcode_mappings` is only needed when `--clustering_bin` is greater than 2.

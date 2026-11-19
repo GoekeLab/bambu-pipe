@@ -10,16 +10,16 @@
 #   lambda            - Banksy spatial weight
 #   kGeom             - number of spatial neighbours Banksy builds its features from
 #   clusterResolution - resolution passed to FindClusters()
-#   npcs              - number of PCs, capped at ncol(object) - 1
+#   dims              - number of PCs of the BANKSY features (--seurat_dims), capped at ncol(object) - 1
 # Returns the Seurat object with a 'clusters' column in meta.data
-clusterBanksy <- function(object, assay, lambda, kGeom, clusterResolution, npcs = 30) {
+clusterBanksy <- function(object, assay, lambda, kGeom, clusterResolution, dims) {
     # dimx/dimy name the meta.data columns carrying each bin's coordinates
     object <- RunBanksy(object, lambda = lambda, assay = assay, slot = "data",
                         features = "variable", k_geom = kGeom,
                         dimx = "pxl_col_in_fullres", dimy = "pxl_row_in_fullres", verbose = FALSE)
 
     DefaultAssay(object) <- "BANKSY"
-    npcs   <- min(npcs, ncol(object) - 1)
+    npcs   <- min(dims, ncol(object) - 1)
     object <- RunPCA(object, assay = "BANKSY", reduction.name = "pca.banksy",
                      features = rownames(object), npcs = npcs, verbose = FALSE)
     object <- FindNeighbors(object, reduction = "pca.banksy", dims = 1:npcs, verbose = FALSE)
@@ -30,11 +30,11 @@ clusterBanksy <- function(object, assay, lambda, kGeom, clusterResolution, npcs 
 #   object            - Seurat object of one bin resolution
 #   assay             - name of the assay to cluster on
 #   clusterResolution - resolution passed to FindClusters()
-#   dims              - number of PCs, capped at ncol(object) - 1
+#   dims              - number of PCs (--seurat_dims), capped at ncol(object) - 1
 #   ncells            - number of cells SketchData() samples; sketch-based analysis is
 #                       only performed when the object has more cells than this
 # Returns the Seurat object with a 'clusters' column in meta.data
-clusterExpression <- function(object, assay, clusterResolution, dims = 15, ncells = 50000) {
+clusterExpression <- function(object, assay, clusterResolution, dims, ncells = 50000) {
     object <- FindVariableFeatures(object, verbose = FALSE)
     object <- ScaleData(object, verbose = FALSE)
 
