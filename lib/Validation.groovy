@@ -1,22 +1,49 @@
 class Validation {
 
+    // FASTQ extensions the pipeline routes to preprocessing (any other sample must be a .bam)
+    static final List<String> FASTQ_EXTENSIONS = ['.fastq', '.fq', '.fastq.gz', '.fq.gz']
+
     static def validateParams(params, workflow) {
         // Container engine check
         if (!(workflow.containerEngine in ['docker', 'singularity']))
             throw new Exception("A container engine is required — please run with '-profile docker' or '-profile singularity'")
 
-        // File existence checks
-        if (!params.input.exists())
-            throw new Exception("params.input '${params.input}' does not exist")
+        // a new run and a restart (--manual_clustering) take different inputs; a mix is rejected
+        def newRunInputs  = [input: params.input, genome: params.genome, annotation: params.annotation]
+        def restartInputs = [clusters: params.clusters, quant_data: params.quant_data, extended_annotations: params.extended_annotations]
+        def (required, notUsed) = params.manual_clustering ? [restartInputs, newRunInputs] : [newRunInputs, restartInputs]
 
-        if (params.input.extension != 'csv')
-            throw new Exception("params.input '${params.input}' must be a CSV file")
+        def extra = notUsed.findAll { name, path -> path != null }.keySet().collect { name -> "--${name}" }
+        if (extra) {
+            if (params.manual_clustering)
+                throw new Exception("A --manual_clustering restart takes --clusters, --quant_data and --extended_annotations instead — remove ${extra.join(', ')}")
+            else
+                throw new Exception("${extra.join(', ')} only apply when restarting with --manual_clustering")
+        }
 
-        if (!params.genome.exists())
-            throw new Exception("params.genome '${params.genome}' does not exist")
+        required.each { name, path ->
+            if (path == null)
+                throw new Exception("params.${name} is required" + (params.manual_clustering ? " when params.manual_clustering is true" : ""))
+            if (!path.exists())
+                throw new Exception("params.${name} '${path}' does not exist")
+        }
 
-        if (!params.annotation.exists())
-            throw new Exception("params.annotation '${params.annotation}' does not exist")
+        // file type checks
+        if (params.manual_clustering) {
+            if (!['.csv', '.rds'].any { ext -> params.clusters.name.endsWith(ext) })
+                throw new Exception("params.clusters '${params.clusters}' must be a .csv file with 'id' and 'cluster' columns")
+            ['quant_data', 'extended_annotations'].each { name ->
+                if (!params[name].name.endsWith('.rds'))
+                    throw new Exception("params.${name} '${params[name]}' must be the ${name}.rds written to intermediate_R/ by the first run")
+            }
+        }
+        else {
+            if (params.input.extension != 'csv')
+                throw new Exception("params.input '${params.input}' must be a CSV file")
+            // bambu reads the annotation as GTF; a GFF3 file is read without an error into a wrong annotation
+            if (!['.gtf', '.gtf.gz'].any { ext -> params.annotation.name.endsWith(ext) })
+                throw new Exception("params.annotation '${params.annotation}' must be a .gtf or .gtf.gz file")
+        }
 
         // Enum checks
         if (!params.valid_quantification_modes.contains(params.quantification_mode))
@@ -26,11 +53,25 @@ class Validation {
         if (params.seurat_resolution <= 0)
             throw new Exception("Invalid params.seurat_resolution '${params.seurat_resolution}' — must be a positive number")
 
+        // clustering computes at most 50 principal components
+        if (params.seurat_dims < 2 || params.seurat_dims > 50)
+            throw new Exception("Invalid params.seurat_dims '${params.seurat_dims}' — must be an integer between 2 and 50")
+
         if (params.ndr != null && (params.ndr < 0 || params.ndr > 1))
             throw new Exception("Invalid params.ndr '${params.ndr}' — must be a float between 0 and 1")
 
+        if (params.min_read_fraction_by_gene < 0 || params.min_read_fraction_by_gene > 1)
+            throw new Exception("Invalid params.min_read_fraction_by_gene '${params.min_read_fraction_by_gene}' — must be a float between 0 and 1")
+
         // Visium HD checks
         if (params.visium_hd) {
+            // banksy_lambda weighs the neighbourhood against the bin's own expression
+            if (params.banksy_lambda < 0 || params.banksy_lambda > 1)
+                throw new Exception("Invalid params.banksy_lambda '${params.banksy_lambda}' — must be a float between 0 and 1")
+
+            if (params.banksy_k_geom < 1)
+                throw new Exception("Invalid params.banksy_k_geom '${params.banksy_k_geom}' — must be a positive integer")
+
             def needsBarcodeMappings
 
             if (params.manual_clustering) {
@@ -119,13 +160,29 @@ class Validation {
             throw new Exception("params.clustering_bin '${clusteringBin}' is not listed in params.bins '${bins}' — available bins: ${resolutions.join(', ')}")
     }
 
-    static def validateVisiumSampleCount(samples, loupeAlignment) {
-        def has_visium = samples.any { sample, path, meta -> meta.chemistry.startsWith('visium') }
-        if (has_visium && samples.size() > 1)
-            throw new Exception("Visium chemistry requires exactly 1 sample, but found ${samples.size()}")
+    // Validates a whole standard samplesheet: the checks on each row, then the checks across rows.
+    // Returns the rows, so that samples are only processed once the samplesheet has passed.
+    static def validateSamplesheet(rows, params, log) {
+        if (rows.isEmpty())
+            throw new Exception("Samplesheet has no samples")
 
-        if (loupeAlignment != null && !has_visium)
+        // checks on each row
+        rows.each { row -> validateRow(row, params, log) }
+
+        // checks across rows
+        // duplicate names overwrite each other's outputs and collide in transcript discovery
+        def duplicated = rows.collect { row -> row.sample }.countBy { name -> name }.findAll { name, n -> n > 1 }.keySet()
+        if (duplicated)
+            throw new Exception("Sample names must be unique — duplicated: ${duplicated.join(', ')}")
+
+        def hasVisium = rows.any { row -> row.chemistry.startsWith('visium') }
+        if (hasVisium && rows.size() > 1)
+            throw new Exception("Visium chemistry requires exactly 1 sample, but found ${rows.size()}")
+
+        if (params.loupe_alignment != null && !hasVisium)
             throw new Exception("params.loupe_alignment was provided but no sample uses a visium chemistry")
+
+        rows
     }
 
     static def validateRow(row, params, log) {
@@ -135,6 +192,11 @@ class Validation {
             if (!row[col])
                 throw new Exception("A row in the samplesheet has an empty '${col}' value")
         }
+
+        // samples are routed by extension; a file with any other extension would be silently dropped
+        def supported = FASTQ_EXTENSIONS + ['.bam']
+        if (!supported.any { ext -> row.path.endsWith(ext) })
+            throw new Exception("Sample '${row.sample}' has an unsupported file '${row.path}' — must end in one of: ${supported.join(', ')}")
 
         if (!params.valid_chemistries.contains(row.chemistry)) {
             if (row.path.endsWith('.bam'))

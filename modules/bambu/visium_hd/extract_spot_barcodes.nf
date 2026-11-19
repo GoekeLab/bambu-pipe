@@ -1,6 +1,6 @@
 process EXTRACT_SPOT_BARCODES {
     label "bambu"
-    label "low_cpu"
+    label "single_cpu"
     label "medium_mem"
     label "short"
 

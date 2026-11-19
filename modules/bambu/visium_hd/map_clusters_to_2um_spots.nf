@@ -1,6 +1,6 @@
 process MAP_CLUSTERS_TO_2UM_SPOTS {
     label "bambu"
-    label "low_cpu"
+    label "single_cpu"
     label "medium_mem"
     label "short"
 

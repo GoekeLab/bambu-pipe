@@ -106,8 +106,15 @@ process PREPROCESS_FASTQ {
     if [[ $meta.chemistry == visium-v* ]]; then
         barcode_list=$whitelist
     else
+        # Optionally search the whole barcode rank curve for the inflection point (-u 0), instead of
+        # flexiplex-filter's default range, which ends at the 95th percentile of barcode counts
+        if [[ $params.flexiplex_full_rank_search == "true" ]]; then
+            max_rank_arg="-u 0"
+        else
+            max_rank_arg=""
+        fi
         flexiplex -p $task.cpus "\${flank_seq[@]}" -f 0 ${sample}_chopper_out.fastq
-        flexiplex-filter -w $whitelist --outfile my_filtered_barcode_list.txt flexiplex_barcodes_counts.txt
+        flexiplex-filter \$max_rank_arg -w $whitelist --outfile my_filtered_barcode_list.txt flexiplex_barcodes_counts.txt
         barcode_list=my_filtered_barcode_list.txt
     fi
 

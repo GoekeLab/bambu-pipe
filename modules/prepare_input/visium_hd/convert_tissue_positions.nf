@@ -2,7 +2,7 @@ process CONVERT_TISSUE_POSITIONS {
     publishDir "$params.output_dir/intermediate_visium_hd", mode: 'copy', pattern: '*.csv', enabled: params.save_intermediates
     publishDir "$params.output_dir/intermediate_visium_hd", mode: 'copy', pattern: 'barcodes_in_tissue.txt', enabled: params.save_intermediates
     label "pyarrow_pandas"
-    label "low_cpu"
+    label "single_cpu"
     label "low_mem"
     label "short"
 
