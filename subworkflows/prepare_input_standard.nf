@@ -9,16 +9,15 @@ workflow PREPARE_INPUT_STANDARD {
     loupe_alignment
 
     main:
-    // parse samplesheet rows into channel of tuples (sample, path, metadata)
-    ch_samples = ch_rows.map { row ->
-        Validation.validateRow(row, params, log) // validate samplesheet structure and input values
-        def sample_path = file(row.path, checkIfExists: true)
-        def meta = [chemistry: row.chemistry, technology: row.technology]
-        [row.sample, sample_path, meta]
-    }
-
-    // validate: for visium runs, ensure only one sample is processed at a time
-    ch_samples.collect(flat: false).map { samples -> Validation.validateVisiumSampleCount(samples, loupe_alignment) }
+    // validate the whole samplesheet before any sample is processed, then parse rows into (sample, path, metadata)
+    ch_samples = ch_rows.toList()
+        .map { rows -> Validation.validateSamplesheet(rows, params, log) }
+        .flatMap { rows -> rows }
+        .map { row ->
+            def sample_path = file(row.path, checkIfExists: true)
+            def meta = [chemistry: row.chemistry, technology: row.technology]
+            [row.sample, sample_path, meta]
+        }
 
     // extract distinct chemistries from metadata
     ch_unique_chem = ch_samples.map { _sample, _path, meta -> meta.chemistry }.unique()
@@ -58,7 +57,7 @@ workflow PREPARE_INPUT_STANDARD {
     }
 
     // split samples by file type
-    def fastq_exts = ['.fastq', '.fq', '.fastq.gz', '.fq.gz']
+    def fastq_exts = Validation.FASTQ_EXTENSIONS // the same list validateRow accepts
     ch_fastq = ch_updated_samples.filter { _sample, path, _meta -> fastq_exts.any { ext -> path.name.endsWith(ext) } }
     ch_bam = ch_updated_samples.filter { _sample, path, _meta -> path.name.endsWith('.bam') }
 

@@ -10,7 +10,6 @@ process BAMBU_CLUSTER_LEVEL_QUANTIFICATION {
     path(clusters)
     path(quant_data)
     path(extended_annotation)
-    path(genome)
 
     output:
     path ('transcript_counts_clusters')
@@ -34,7 +33,6 @@ process BAMBU_CLUSTER_LEVEL_QUANTIFICATION {
         reads = quantData,
         output = "clusteredEM",
         annotations = extendedAnno,
-        genome = "$genome",
         ncore = $task.cpus,
         verbose = FALSE,
         opt.em = list(degradationBias = TRUE),

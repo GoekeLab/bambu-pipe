@@ -2,7 +2,7 @@ process VISIUM_BUILD_TISSUE_POSITIONS {
     publishDir "$params.output_dir/intermediate_visium", mode: 'copy', pattern: 'tissue_positions.csv', enabled: params.save_intermediates
     publishDir "$params.output_dir/intermediate_visium", mode: 'copy', pattern: 'tissue_barcodes.txt', enabled: params.save_intermediates
     label "pyarrow_pandas"
-    label "low_cpu"
+    label "single_cpu"
     label "low_mem"
     label "short"
 

@@ -1,7 +1,7 @@
 process SPOT_BIN_MAPPINGS {
     publishDir "$params.output_dir/intermediate_visium_hd", mode: 'copy', pattern: '*.csv.gz', enabled: params.save_intermediates
     label "pyarrow_pandas"
-    label "low_cpu"
+    label "single_cpu"
     label "low_mem"
     label "short"
 

@@ -1,6 +1,6 @@
 process PAFTOOLS_GFF2BED {
     label "minimap2_samtools"
-    label "low_cpu"
+    label "single_cpu"
     label "low_mem"
     label "short"
 

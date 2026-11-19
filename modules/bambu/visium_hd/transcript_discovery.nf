@@ -7,7 +7,7 @@ process BAMBU_TRANSCRIPT_DISCOVERY_VISIUM_HD {
     publishDir "$params.output_dir/intermediate_R", mode: 'copy', pattern: 'extended_annotations.rds'
     publishDir "$params.output_dir/intermediate_R", mode: 'copy', pattern: 'col_data_002um.rds', enabled: params.save_intermediates
     label "bambu"
-    label "medium_cpu"
+    cpus  params.discovery_ncore    // fixed core count, does not scale with retries
     label "high_mem"
     label "medium"
 
@@ -42,7 +42,8 @@ process BAMBU_TRANSCRIPT_DISCOVERY_VISIUM_HD {
 
     # the 2um tissue_positions is passed as sampleData so bambu joins the per-spot spatial metadata into colData
     result <- bambuDiscoveryToUniqueCounts(reads = readClassFile, annotation = annotation, genome = "$genome",
-        ncore = $task.cpus, ndr = $ndr, sampleData = "$tissue_positions")
+        ncore = $params.discovery_ncore, ndr = $ndr, sampleData = "$tissue_positions",
+        opt.discovery = list(min.readFractionByGene = $params.min_read_fraction_by_gene))
     saveRDS(result\$extendedAnno, "extended_annotations.rds")
     writeToGTF(result\$extendedAnno, "extended_annotations.gtf")
     saveRDS(result\$quantData, "quant_data.rds")

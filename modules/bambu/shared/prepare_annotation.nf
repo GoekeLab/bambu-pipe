@@ -1,6 +1,6 @@
 process BAMBU_PREPARE_ANNOTATION{
     label "bambu"
-    label "low_cpu"
+    label "single_cpu"
     label "low_mem"
     label "short"
 

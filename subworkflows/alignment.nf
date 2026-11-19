@@ -16,7 +16,7 @@ workflow ALIGNMENT {
     // Build minimap2 index based on reference genome
     MINIMAP_BUILD_INDEX(ch_genome.combine(ch_gate).map { g, _gate -> g })
 
-    // Convert gtf/gff annotation to bed format
+    // Convert the GTF annotation to BED format (splice junctions for minimap2)
     PAFTOOLS_GFF2BED(ch_annotation.combine(ch_gate).map { a, _gate -> a })
 
     // Minimap alignment

@@ -1,4 +1,4 @@
-process SEURAT_VISIUM_HD {
+process SEURAT_CLUSTERING_VISIUM_HD {
     publishDir "$params.output_dir", mode: 'copy', pattern: 'seurat_obj.rds'
     label "seurat"
     label "medium_cpu"
@@ -35,9 +35,9 @@ process SEURAT_VISIUM_HD {
     if (banksy) {
         library(SeuratWrappers)
         library(Banksy)
-        object <- clusterBanksy(object, assay, $params.banksy_lambda, $params.banksy_k_geom, $params.seurat_resolution)
+        object <- clusterBanksy(object, assay, $params.banksy_lambda, $params.banksy_k_geom, $params.seurat_resolution, $params.seurat_dims)
     } else {
-        object <- clusterExpression(object, assay, $params.seurat_resolution)
+        object <- clusterExpression(object, assay, $params.seurat_resolution, $params.seurat_dims)
     }
 
     # Save the cluster assignment at the clustered resolution, plus the Seurat object

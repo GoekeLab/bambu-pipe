@@ -9,7 +9,6 @@ process BAMBU_SPOT_LEVEL_QUANTIFICATION {
     tuple val(resolution), path(tissue_positions), path(spot_mappings)
     path(quant_data)
     path(extended_annotation)
-    path(genome)
 
     output:
     path ("transcript_counts_${resolution}")
@@ -40,7 +39,6 @@ process BAMBU_SPOT_LEVEL_QUANTIFICATION {
         reads = quantData,
         output = if (is.null(clusters)) "EM" else "clusteredEM",
         annotations = extendedAnno,
-        genome = "$genome",
         ncore = $task.cpus,
         verbose = FALSE,
         opt.em = list(degradationBias = FALSE),

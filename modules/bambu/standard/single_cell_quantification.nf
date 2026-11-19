@@ -8,7 +8,6 @@ process BAMBU_SINGLE_CELL_QUANTIFICATION {
     input:
     path(quant_data)
     path(extended_annotation)
-    path(genome)
 
     output:
     path ('transcript_counts_singlecell')
@@ -28,7 +27,6 @@ process BAMBU_SINGLE_CELL_QUANTIFICATION {
         reads = quantData,
         output = "EM",
         annotations = extendedAnno,
-        genome = "$genome",
         ncore = $task.cpus,
         verbose = FALSE,
         opt.em = list(degradationBias = FALSE)
